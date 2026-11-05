@@ -77,6 +77,40 @@
   .acts{display:flex;flex-direction:column;gap:6px}
   .dl{min-height:40px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border-color:var(--line)}
   .m a{color:var(--ok);font-weight:600}
+  select{width:100%;min-height:48px;padding:10px 12px;font:inherit;color:inherit;background:#fff;border:1.5px solid var(--line);border-radius:8px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px}
+  .tabs button{flex:1;min-height:44px;padding:0 6px;font-size:14px;background:#fff;color:var(--ink);border-color:var(--line)}
+  .tabs button[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .seg.three{grid-template-columns:repeat(3,1fr)}
+  .seg.three span{padding:12px 4px;font-size:14px}
+  .seg input[value="BEDA LOKASI"]:checked+span{background:var(--warn);border-color:var(--warn)}
+  .seg input[value="TIDAK ADA"]:checked+span{background:var(--bad);border-color:var(--bad)}
+  .ksu input:checked+span::before{content:"\2713\00a0"}
+  .seg input:disabled+span{cursor:not-allowed}
+  .grp{font-weight:650;margin:16px 0 2px}
+  .grp:first-child{margin-top:0}
+  .bitem{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+  .bitem button{flex:none;min-height:40px;font-size:14px}
+  details{margin-bottom:12px}
+  summary{font-weight:650;cursor:pointer;min-height:44px;display:flex;align-items:center}
+  .cardx{border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px;background:#fff}
+  .cardx .bar2{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--ink);color:#fff;font-weight:650;font-size:14px}
+  .twrap{overflow-x:auto}
+  table.rk{width:100%;border-collapse:collapse;font-size:14px}
+  .rk th,.rk td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center}
+  .rk th{background:#f1f2ee;font-size:12px}
+  .rk td:nth-child(2),.rk th:nth-child(2){text-align:left}
+  .rk tr.minus td{background:#fbd5d1;color:#8a1b14;font-weight:600}
+  .rk tr.plus td{background:#cfeee6;color:#0a5246;font-weight:600}
+  .rk tr.cat td{background:#e3e5e0;font-weight:650;text-align:left}
+  .rk tr.tot td{background:#f1f2ee;font-weight:700}
+  .rk input{width:100%;min-width:90px;min-height:38px;padding:4px 8px;font:inherit;border:1.5px solid var(--line);border-radius:6px;text-align:right}
+  .kes{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;font-size:14px}
+  .kes .kh{display:flex;justify-content:space-between;gap:8px;font-weight:650;margin-bottom:4px}
+  .kes.sum{background:#f1f2ee}
+  .neg{color:var(--bad);font-weight:700}
+  .pos{color:var(--ok);font-weight:700}
+  .printonly{display:none}
   .empty{color:var(--muted);margin:4px 0}
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,480px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   #toast.show{opacity:1}
@@ -85,10 +119,20 @@
   #scanner video{flex:1;min-height:0;width:100%;object-fit:cover}
   #scanner p{margin:0;padding:10px 16px;color:#fff;font-size:14px;text-align:center;background:#000}
   #scanner button{margin:0 16px calc(16px + env(safe-area-inset-bottom,0px))}
+  @media print{
+    body{background:#fff}
+    .bar,.tabs,.noprint,#toast,#scanner{display:none!important}
+    main>section:not(#rekapSec){display:none!important}
+    #rekapSec{border:0;padding:0;margin:0;background:#fff}
+    .printonly{display:block!important}
+    .rk input{border:0;padding:0;min-width:0}
+    .cardx{break-inside:avoid}
+  }
   @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js" defer></script>
 </head>
 <body>
@@ -100,20 +144,8 @@
 
 <main>
   <div id="cfgWarn" class="notice" hidden>
-    URL Google Apps Script belum diisi. Isi konstanta <b></b> di bagian script, lalu muat ulang halaman.
+    URL Google Apps Script belum diisi. Isi konstanta <b>GAS_URL</b> di bagian script, lalu muat ulang halaman.
   </div>
-
-  <section>
-    <h2>Data master</h2>
-    <p id="masterInfo">Belum ada file master.</p>
-    <div class="mbtns">
-      <button id="masterBtn" type="button">Unggah master Excel / CSV</button>
-      <button id="masterPull" class="ghost" type="button">Muat dari server</button>
-      <button id="masterDel" class="ghost" type="button" hidden>Hapus</button>
-    </div>
-    <input id="masterFile" type="file" accept=".xlsx,.xls,.csv" hidden>
-    <p class="hint">Master yang diunggah dibagikan lewat Google Sheets ke semua perangkat. Perangkat lain mengunduhnya otomatis saat online, lalu bisa dipakai offline. Header yang dikenali: Engine No, Chasis No, Type Unit, Warehouse.</p>
-  </section>
 
   <section id="sesi">
     <div id="sesiView" hidden>
@@ -141,8 +173,16 @@
     </form>
   </section>
 
+  <nav id="tabs" class="tabs" hidden>
+    <button type="button" data-tab="opname" aria-selected="true">Opname</button>
+    <button type="button" data-tab="belum" aria-selected="false">Belum opname</button>
+    <button type="button" data-tab="rekap" aria-selected="false">Rekap KSU</button>
+    <button type="button" data-tab="data" aria-selected="false">Master</button>
+  </nav>
+
   <section id="inputSec" hidden>
     <h2>Input stok</h2>
+    <p id="progres" class="hint" style="margin:-6px 0 12px"></p>
     <form id="form" autocomplete="off">
       <label for="engine">Engine No</label>
       <div class="scan">
@@ -165,9 +205,11 @@
         <div><label for="warehouse">Warehouse</label><input id="warehouse" type="text"></div>
       </div>
 
-      <div class="row">
-        <div><label for="unit">Nama unit (opsional)</label><input id="unit" type="text"></div>
-        <div><label for="jumlah">Jumlah stok</label><input id="jumlah" type="number" inputmode="numeric" min="0" step="1" value="1" required></div>
+      <span class="lbl">Status opname</span>
+      <div class="seg three">
+        <label><input type="radio" name="statusOp" value="ADA / SESUAI" checked><span>Ada / Sesuai</span></label>
+        <label><input type="radio" name="statusOp" value="BEDA LOKASI"><span>Beda lokasi</span></label>
+        <label><input type="radio" name="statusOp" value="TIDAK ADA"><span>Tidak ada</span></label>
       </div>
 
       <span class="lbl">Kondisi</span>
@@ -176,7 +218,20 @@
         <label><input type="radio" name="kondisi" value="Rusak"><span>Rusak</span></label>
       </div>
 
-      <span class="lbl">Foto unit</span>
+      <div id="ksuBox">
+        <span class="lbl">Kelengkapan KSU (centang yang ada)</span>
+        <p id="ksuSpec" class="hint" style="margin:0 0 8px"></p>
+        <div class="seg ksu">
+          <label><input type="checkbox" name="ksu" value="spion"><span>Spion</span></label>
+          <label><input type="checkbox" name="ksu" value="aki"><span>Aki</span></label>
+          <label><input type="checkbox" name="ksu" value="toolkit"><span>Toolkit</span></label>
+          <label><input type="checkbox" name="ksu" value="plat_holder"><span>Plat holder</span></label>
+          <label><input type="checkbox" name="ksu" value="helm"><span>Helm</span></label>
+          <label><input type="checkbox" name="ksu" value="safety_riding"><span>Safety riding</span></label>
+        </div>
+      </div>
+
+      <span id="fotoLbl" class="lbl">Foto unit</span>
       <div class="photo">
         <div class="file"><input id="foto" type="file" accept="image/*" capture="environment"></div>
         <img id="preview" alt="Pratinjau foto" hidden>
@@ -188,7 +243,7 @@
     </form>
   </section>
 
-  <section>
+  <section id="listSec" hidden>
     <div class="head">
       <h2>Data di perangkat <span id="count" class="m"></span></h2>
       <button id="sync" class="ghost" type="button">Sinkronkan Data</button>
@@ -196,6 +251,99 @@
     <button id="zipAll" class="ghost" type="button" style="width:100%;min-height:42px;margin-bottom:6px">Unduh semua foto (ZIP)</button>
     <ul id="list"></ul>
     <p id="empty" class="empty">Belum ada data tersimpan.</p>
+  </section>
+  <section id="belumSec" hidden>
+    <div class="head">
+      <h2>Unit belum opname</h2>
+      <button id="belumRefresh" class="ghost" type="button">Perbarui</button>
+    </div>
+    <p id="belumStat" class="m" style="margin:0 0 10px"></p>
+    <div class="row" style="margin-bottom:6px">
+      <select id="belumWh" aria-label="Filter warehouse"></select>
+      <input id="belumQ" type="text" placeholder="Cari mesin / rangka / tipe" aria-label="Cari unit">
+    </div>
+    <div id="belumList"></div>
+  </section>
+
+  <section id="rekapSec" hidden>
+    <div class="head noprint">
+      <h2>Rekap Audit KSU</h2>
+      <button id="rekapRefresh" class="ghost" type="button">Perbarui</button>
+    </div>
+    <div class="mbtns noprint" style="margin:0 0 10px">
+      <button id="rekapPrint" type="button">Cetak / PDF</button>
+      <button id="rekapXlsx" class="ghost" type="button">Unduh Excel</button>
+    </div>
+    <p id="rekapInfo" class="hint noprint" style="margin:0 0 10px"></p>
+
+    <details class="noprint" id="gudangBox">
+      <summary>Input fisik KSU gudang</summary>
+      <form id="gudangForm" autocomplete="off">
+        <label for="gKat">Kategori</label>
+        <select id="gKat">
+          <option value="Aki">Aki / Accu</option>
+          <option value="Helm">Helm</option>
+          <option value="Spion">Spion</option>
+          <option value="ToolKit">Tool Kit</option>
+          <option value="PlatHolder">Plat Holder</option>
+          <option value="SafetyRiding">Safety Riding</option>
+        </select>
+        <label for="gJenis">Jenis / tipe</label>
+        <select id="gJenis"></select>
+        <div class="row">
+          <div><label for="gQty">Jumlah (pcs)</label><input id="gQty" type="number" min="1" step="1" inputmode="numeric" value="1" required></div>
+          <div><label for="gCat">Catatan</label><input id="gCat" type="text"></div>
+        </div>
+        <button class="full" type="submit">Simpan fisik gudang</button>
+      </form>
+      <div id="gudangList" style="margin-top:12px"></div>
+    </details>
+
+    <div id="rekapPrintArea">
+      <div class="printonly">
+        <h2 style="text-align:center;margin:0">BERITA ACARA AUDIT STOK KSU</h2>
+        <p id="printMeta" style="text-align:center;margin:4px 0 14px"></p>
+      </div>
+      <div id="rekapKesimpulan"></div>
+      <div id="rekapTables"></div>
+      <h2 style="margin-top:18px">Daftar barang minus dan plus</h2>
+      <p id="minusStat" class="m" style="margin:0 0 8px"></p>
+      <div id="minusList"></div>
+      <p id="minusTotal" class="t" style="margin:8px 0 0"></p>
+    </div>
+  </section>
+
+  <section id="masterSec" hidden>
+    <h2>Data master</h2>
+    <p id="masterInfo">Belum ada file master.</p>
+    <div class="mbtns">
+      <button id="masterBtn" type="button">Unggah master Excel / CSV</button>
+      <button id="masterPull" class="ghost" type="button">Muat dari server</button>
+      <button id="masterDel" class="ghost" type="button" hidden>Hapus</button>
+    </div>
+    <input id="masterFile" type="file" accept=".xlsx,.xls,.csv" hidden>
+    <p class="hint">Master yang diunggah dibagikan lewat Google Sheets ke semua perangkat. Perangkat lain mengunduhnya otomatis saat online, lalu bisa dipakai offline. Header yang dikenali: Engine No, Chasis No, Type Unit, Warehouse.</p>
+
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <h2>Warehouse pendukung (file ke-2 sampai ke-6)</h2>
+    <p class="hint" style="margin:-4px 0 10px">Menambahkan lokasi tambahan ke unit yang cocok. Unit yang tidak ada di master ditambahkan sebagai Belum Opname. Master harus diunggah lebih dulu. Kolom yang dikenali: No. Rangka/Chasis, No. Mesin/Engine, Warehouse/Lokasi, Tipe.</p>
+    <div class="row">
+      <div>
+        <label for="whSlot" style="margin-top:0">Nomor file</label>
+        <select id="whSlot">
+          <option value="2">File ke-2</option><option value="3">File ke-3</option><option value="4">File ke-4</option>
+          <option value="5">File ke-5</option><option value="6">File ke-6</option>
+        </select>
+      </div>
+      <div style="align-self:end"><button id="whBtn" type="button" style="width:100%">Unggah file</button></div>
+    </div>
+    <input id="whFile" type="file" accept=".xlsx,.xls,.csv" hidden>
+    <div id="whList" style="margin-top:10px"></div>
+
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <h2>Ekspor hasil</h2>
+    <button id="exportHasil" type="button" style="width:100%">Unduh hasil opname per unit (Excel)</button>
+    <p class="hint">Berisi semua unit master dan warehouse pendukung, lengkap dengan status, checklist KSU, dan warehouse tambahan. Foto bisa diunduh sebagai ZIP dari tab Opname.</p>
   </section>
 </main>
 
@@ -222,11 +370,12 @@ const norm = v => String(v == null ? '' : v).trim().toUpperCase().replace(/[\s\-
 /* ---------- IndexedDB ---------- */
 function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onupgradeneeded = () => {
       const d = req.result;
       if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, { keyPath: 'id' });
       if (!d.objectStoreNames.contains(META)) d.createObjectStore(META, { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('gudang')) d.createObjectStore('gudang', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -327,7 +476,7 @@ function updateNet() {
   $('net').classList.toggle('off', !on);
   refreshSyncBtn();
 }
-window.addEventListener('online', () => { updateNet(); toast('Kembali online. Data tertunda bisa disinkronkan.'); syncMaster(); });
+window.addEventListener('online', () => { updateNet(); toast('Kembali online. Data tertunda bisa disinkronkan.'); syncMaster(); syncWh(); syncDone(); });
 window.addEventListener('offline', () => { updateNet(); toast('Anda offline. Data disimpan di perangkat.'); });
 
 /* ---------- Data master (Excel / CSV) ---------- */
@@ -365,18 +514,13 @@ function parseMaster(buf, fileName) {
 
 function setMaster(m) {
   master = m;
-  byE.clear(); byC.clear(); sugIdx.length = 0;
-  if (m) for (const r of m.rows) {
-    const e = norm(r.e), c = norm(r.c);
-    if (e) byE.set(e, r);
-    if (c) byC.set(c, r);
-    sugIdx.push({ r, e, c });
-  }
+  rebuildIndex(false);
   $('masterInfo').textContent = m
     ? `${m.fileName}: ${m.rows.length.toLocaleString('id-ID')} unit. Dimuat ${new Date(m.loadedAt).toLocaleString('id-ID')}.`
     : 'Belum ada file master. Validasi tidak aktif.';
   $('masterBtn').textContent = m ? 'Ganti master' : 'Unggah master Excel / CSV';
   $('masterDel').hidden = !m;
+  refreshProgress();
 }
 
 $('masterBtn').addEventListener('click', () => $('masterFile').click());
@@ -412,7 +556,7 @@ $('masterFile').addEventListener('change', async e => {
     toast(err.message || 'Gagal membaca file.', true);
   }
 });
-$('masterPull').addEventListener('click', () => syncMaster(true));
+$('masterPull').addEventListener('click', () => { syncMaster(true); syncWh(true); });
 
 /* ---------- Bagikan / ambil master lewat Google Apps Script ---------- */
 let adminKey = '';
@@ -486,12 +630,13 @@ let cur = null;
 function validate() {
   const r = cur = lookup($('engine').value, $('chasis').value);
   $('val').className = 'val ' + r.cls;
-  $('val').textContent = r.msg;
-  for (const [id, key] of [['typeUnit', 't'], ['warehouse', 'w']]) {
+  $('val').textContent = r.msg + (r.row && r.row.sumber ? ` Unit ini dari warehouse pendukung file ke-${r.row.sumber}, tidak ada di master utama.` : '');
+  for (const [id, key] of [['typeUnit', 't'], ['warehouse', 'fw']]) {
     const el = $(id);
     if (r.row) { if (!el.value || el.dataset.auto) { el.value = r.row[key]; el.dataset.auto = '1'; } }
     else if (el.dataset.auto) { el.value = ''; delete el.dataset.auto; }
   }
+  ksuHint(r);
   return r;
 }
 /* Saran otomatis: ketik minimal 3 karakter (mis. 4 angka terakhir), pilih dari daftar */
@@ -599,6 +744,7 @@ async function kirim(rec) {
     engineNo: rec.engineNo, chasisNo: rec.chasisNo, typeUnit: rec.typeUnit, warehouse: rec.warehouse,
     unit: rec.unit, jumlah: rec.jumlah, kondisi: rec.kondisi,
     kecocokan: rec.kecocokan, foto: rec.fotoNama,
+    statusOpname: rec.statusOpname || '', ksu: rec.ksu || null,
     fotoWaktu: rec.fotoWaktu || '',
     koordinat: rec.lat != null ? `${rec.lat.toFixed(6)}, ${rec.lng.toFixed(6)}` : '',
     mapsUrl: rec.mapsUrl || '',
@@ -642,7 +788,8 @@ $('form').addEventListener('submit', async e => {
   const eNo = $('engine').value.trim().toUpperCase(), cNo = $('chasis').value.trim().toUpperCase();
   const file = $('foto').files[0];
   if (!eNo && !cNo) return toast('Isi Engine No atau Chasis No.', true);
-  if (!file) return toast('Foto unit wajib diisi.', true);
+  const statusOp = document.querySelector('input[name=statusOp]:checked').value;
+  if (!file && statusOp !== 'TIDAK ADA') return toast('Foto unit wajib diisi.', true);
 
   const v = validate();
   if (v.s === 'Tidak Cocok' || v.s === 'Tidak Terdaftar') {
@@ -666,7 +813,7 @@ $('form').addEventListener('submit', async e => {
       geo ? mapsUrl.replace('https://www.', '') : '',
       `E: ${eNo || '-'} | C: ${cNo || '-'}`
     ].filter(Boolean);
-    const fotoBlob = await addExif(await shrink(file, lines), geo, when);
+    const fotoBlob = file ? await addExif(await shrink(file, lines), geo, when) : null;
 
     const rec = {
       id: uid(),
@@ -678,11 +825,13 @@ $('form').addEventListener('submit', async e => {
       chasisNo: cNo,
       typeUnit: $('typeUnit').value.trim(),
       warehouse: $('warehouse').value.trim(),
-      unit: $('unit').value.trim(),
-      jumlah: Number($('jumlah').value),
+      unit: '',
+      jumlah: 1, // satu nomor mesin/rangka = satu unit
       kondisi: document.querySelector('input[name=kondisi]:checked').value,
       kecocokan: v.s,
-      fotoNama: file.name,
+      statusOpname: statusOp,
+      ksu: readKsu(),
+      fotoNama: file ? file.name : '',
       foto: fotoBlob,
       fotoWaktu: when.toISOString(),
       lat: geo ? geo.lat : null,
@@ -708,12 +857,14 @@ $('form').addEventListener('submit', async e => {
     }
 
     // Reset form, pertahankan petugas, cabang, dan warehouse manual
-    ['engine', 'chasis', 'unit'].forEach(id => $(id).value = '');
+    ['engine', 'chasis'].forEach(id => $(id).value = '');
     $('typeUnit').value = ''; delete $('typeUnit').dataset.auto;
     if ($('warehouse').dataset.auto) { $('warehouse').value = ''; delete $('warehouse').dataset.auto; }
-    $('jumlah').value = 1;
     $('foto').value = ''; $('foto').dispatchEvent(new Event('change'));
     document.querySelector('input[name=kondisi][value=Bagus]').checked = true;
+    document.querySelector('input[name=statusOp][value="ADA / SESUAI"]').checked = true;
+    document.querySelectorAll('input[name=ksu]').forEach(c => { c.checked = false; });
+    applyStatus();
     validate();
     suggest('e'); suggest('c');
     toast(msg);
@@ -766,6 +917,7 @@ $('zipAll').addEventListener('click', async () => {
   try {
     const zip = new JSZip(), used = new Set();
     for (const r of recs) {
+      if (!r.foto) continue;
       let n = photoName(r), i = 1;
       while (used.has(n)) n = photoName(r).replace('.jpg', `_${++i}.jpg`);
       used.add(n);
@@ -798,7 +950,7 @@ async function render() {
   for (const r of recs) {
     const li = document.createElement('li'); li.className = 'item';
     const img = document.createElement('img'); img.alt = 'Foto unit';
-    const u = URL.createObjectURL(r.foto); urls.push(u); img.src = u;
+    if (r.foto) { const u = URL.createObjectURL(r.foto); urls.push(u); img.src = u; }
 
     const info = document.createElement('div');
     const t = document.createElement('div'); t.className = 't';
@@ -806,7 +958,7 @@ async function render() {
     const m1 = document.createElement('div'); m1.className = 'm mono';
     m1.textContent = `${r.engineNo || '-'} / ${r.chasisNo || '-'}`;
     const m2 = document.createElement('div'); m2.className = 'm';
-    m2.textContent = [r.typeUnit, r.warehouse, r.kondisi, r.jumlah != null ? 'x' + r.jumlah : ''].filter(Boolean).join(', ');
+    m2.textContent = [r.typeUnit, r.warehouse, r.kondisi, r.ksu ? 'KSU ' + Object.values(r.ksu).filter(Boolean).length + '/6' : ''].filter(Boolean).join(', ');
     const m3 = document.createElement('div'); m3.className = 'm';
     if (r.fotoWaktu) m3.append(new Date(r.fotoWaktu).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }));
     if (r.mapsUrl) {
@@ -816,6 +968,7 @@ async function render() {
     }
     info.append(t, m1, m2, m3);
     if (r.kecocokan) info.append(mkBadge(r.kecocokan, badgeCls(r.kecocokan)));
+    if (r.statusOpname) info.append(mkBadge(r.statusOpname, r.statusOpname === 'ADA / SESUAI' ? 'ok' : r.statusOpname === 'BEDA LOKASI' ? 'pending' : 'bad'));
     const synced = r.status === 'synced';
     info.append(mkBadge(synced ? 'Terkirim' : 'Tertunda', synced ? 'synced' : 'pending'));
 
@@ -829,10 +982,11 @@ async function render() {
     const dl = document.createElement('button'); dl.className = 'dl'; dl.type = 'button'; dl.textContent = 'Unduh';
     dl.setAttribute('aria-label', 'Unduh foto ' + (r.engineNo || r.chasisNo || 'unit'));
     dl.onclick = () => downloadBlob(r.foto, photoName(r));
-    const acts = document.createElement('div'); acts.className = 'acts'; acts.append(dl, x);
+    const acts = document.createElement('div'); acts.className = 'acts'; if (r.foto) acts.append(dl); acts.append(x);
     li.append(img, info, acts);
     list.append(li);
   }
+  refreshProgress();
   refreshSyncBtn(pend);
 }
 async function refreshSyncBtn(pend) {
@@ -888,7 +1042,7 @@ function showSesi() {
   const ok = !!session;
   $('loginForm').hidden = ok;
   $('sesiView').hidden = !ok;
-  $('inputSec').hidden = !ok;
+  applyTab();
   $('sesiText').textContent = ok ? `${session.nama}, cabang ${session.cabang}` : '';
   if (ok) { $('petugas').value = session.nama; $('cabang').value = session.cabang; }
 }
@@ -957,6 +1111,852 @@ $('sesiUbah').addEventListener('click', () => {
   $('pass').focus();
 });
 
+/* ---------- Status opname & checklist KSU ---------- */
+        const opsiJenis = {
+      'Aki': ['3A/4V', '3,5A/5V', '5A/6V', '7A', 'ICON E'],
+      'Helm': ['New', 'TRX3/HMJ', 'S', 'STYLO', 'CROSS', 'EV', 'CBR150', 'CBR250', 'CBU', 'CROSS/NEW', 'CB150R'],
+      'Spion': ['ADV (KOWA)', 'BEAT (K1AL)', 'BEAT STREET (K1AL-SS)', 'CB150 VERZA CB 150 R (K18A)', 'CBR150 (K45N)', 'CB150X (GLS)', 'CBR 250RR (K64N)', 'CUV E (K3NA)', 'ICON', 'EM1 E', 'GENIO (KOJA)', 'PCX 160 (K97G)', 'REVO SUPRA X (K03S)', 'VARIO 125 (K2VG)', 'SCOOPY (K2FA & K2FV)', 'SUPRA GTR (K56F)', 'SUPERCUB', 'ST 125 DAX', 'CT125', 'SONIC (K56A)', 'STYLO (K3VA)', 'VARIO 160 (K2S)', 'CRF (K84A)'],
+      'ToolKit': ['Tool Kit Standard'],
+      'PlatHolder': ['Plat Holder Standard'],
+      'SafetyRiding': ['Apparel / Kit Safety Riding']
+    };
+
+const mappingTabelKSU = {
+      'KD1': { aki: '3,5A/5V', helm: 'CROSS', spion: 'CRF (K84A)' },
+      'KC0': { aki: '3,5A/5V', helm: 'New', spion: 'CB150 VERZA CB 150 R (K18A)' },
+      'JMG': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'BEAT STREET (K1AL-SS)' },
+      'JME': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'BEAT (K1AL)' },
+      'JMA': { aki: '3A/4V', helm: 'S', spion: 'GENIO (KOJA)' },
+      'JBK': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'REVO SUPRA X (K03S)' },
+      'EF2': { aki: '3A/4V', helm: 'EV', spion: 'EM1 E' },
+      'EF3': { aki: '3A/4V', helm: 'EV', spion: 'CUV E (K3NA)' },
+      'JBP': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'REVO SUPRA X (K03S)' },
+      'JA5': { aki: '3A/4V', helm: 'CBU', spion: 'SUPERCUB' },
+      'KB1': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'SONIC (K56A)' },
+      'JMF': { aki: '5A/6V', helm: 'TRX3/HMJ', spion: 'BEAT (K1AL)' },
+      'JMB': { aki: '5A/6V', helm: 'S', spion: 'GENIO (KOJA)' },
+      'KCE': { aki: '5A/6V', helm: 'CROSS/NEW', spion: 'CB150X (GLS)' },
+      'KFE': { aki: '5A/6V', helm: 'New', spion: 'PCX 160 (K97G)' },
+      'KB2': { aki: '5A/6V', helm: 'TRX3/HMJ', spion: 'SUPRA GTR (K56F)' },
+      'KFC': { aki: '5A/6V', helm: 'STYLO', spion: 'STYLO (K3VA)' },
+      'KFD': { aki: '5A/6V', helm: 'STYLO', spion: 'STYLO (K3VA)' },
+      'JMH': { aki: '5A/6V', helm: 'S', spion: 'SCOOPY (K2FA & K2FV)' },
+      'KF0': { aki: '5A/6V', helm: 'New', spion: 'VARIO 160 (K2S)' },
+      'KFA': { aki: '5A/6V', helm: 'New', spion: 'VARIO 160 (K2S)' },
+      'KFB': { aki: '5A/6V', helm: 'New', spion: 'ADV (KOWA)' },
+      'KCC': { aki: '5A/6V', helm: 'CBR150', spion: 'CBR150 (K45N)' },
+      'JMD': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' },
+      'JMC': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' },
+      'KCD': { aki: '5A/6V', helm: 'CB150R', spion: 'CB150 VERZA CB 150 R (K18A)' },
+      'MC7': { aki: '7A', helm: 'CBR250', spion: 'CBR 250RR (K64N)' },
+      'MC8': { aki: '7A', helm: 'CBR250', spion: 'CBR 250RR (K64N)' },
+      'EF4': { aki: 'ICON E', helm: 'EV', spion: 'ICON' },
+      'KCB': { aki: '5A/6V', helm: 'CBR150', spion: 'CBR150 (K45N)' },
+      'KF8': { aki: '5A/6V', helm: 'New', spion: 'PCX 160 (K97G)' },
+      'JB0': { aki: '3A/4V', helm: 'CBU', spion: 'ST 125 DAX' },
+      'JA55': { aki: '3A/4V', helm: 'CBU', spion: 'CT125' },
+      'JA6': { aki: '3A/4V', helm: 'CBU', spion: 'CT125' },
+      'JBN': { aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'REVO SUPRA X (K03S)' },
+      'KFF': { aki: '5A/6V', helm: 'New', spion: 'ADV (KOWA)' },
+      'JMJ': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' },
+      'JMK': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' },
+      'KF7': { aki: '5A/6V', helm: 'New', spion: 'PCX 160 (K97G)' },
+      'EF32': { aki: '3,5A/5V', helm: 'EV', spion: 'CUV E (K3NA)' },
+      'KFG': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' },
+      'KFH': { aki: '5A/6V', helm: 'New', spion: 'VARIO 125 (K2VG)' }
+    };
+
+// Spesifikasi KSU standar dari awalan No. Mesin (4 karakter dulu, lalu 3)
+function specKSU(noMesin) {
+  const m = norm(noMesin);
+  const p4 = m.substring(0, 4), p3 = m.substring(0, 3);
+  if (mappingTabelKSU[p4]) return { prefix: p4, ...mappingTabelKSU[p4] };
+  if (mappingTabelKSU[p3]) return { prefix: p3, ...mappingTabelKSU[p3] };
+  return null;
+}
+function ksuHint(r) {
+  const e = (r && r.row && r.row.e) || $('engine').value;
+  const s = specKSU(e), box = $('ksuSpec');
+  if (!norm(e)) box.textContent = 'Isi Engine No untuk melihat spesifikasi KSU standar unit ini.';
+  else if (s) box.textContent = `Standar ${s.prefix}: Aki ${s.aki}, Helm ${s.helm}, Spion ${s.spion}`;
+  else box.textContent = `Awalan mesin ${norm(e).substring(0, 3)} belum ada di tabel spesifikasi KSU.`;
+}
+function readKsu() {
+  const o = {};
+  document.querySelectorAll('input[name=ksu]').forEach(c => { o[c.value] = c.checked; });
+  return o;
+}
+function applyStatus() {
+  const off = document.querySelector('input[name=statusOp]:checked').value === 'TIDAK ADA';
+  document.querySelectorAll('input[name=ksu]').forEach(c => { if (off) c.checked = false; c.disabled = off; });
+  $('ksuBox').style.opacity = off ? '.5' : '';
+  $('fotoLbl').textContent = off ? 'Foto unit (opsional jika tidak ada)' : 'Foto unit';
+}
+document.querySelectorAll('input[name=statusOp]').forEach(r => r.addEventListener('change', applyStatus));
+
+/* ---------- Tab, progres, dan Unit Belum Opname ---------- */
+let tab = 'opname', doneServer = [], belumCache = null;
+
+function applyTab() {
+  const ok = !!session;
+  $('tabs').hidden = !ok;
+  $('inputSec').hidden = !ok || tab !== 'opname';
+  $('listSec').hidden = !ok || tab !== 'opname';
+  $('belumSec').hidden = !ok || tab !== 'belum';
+  $('rekapSec').hidden = !ok || tab !== 'rekap';
+  $('masterSec').hidden = !ok || tab !== 'data';
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+  if (ok && tab === 'belum') renderBelum(true);
+  if (ok && tab === 'rekap') renderRekap();
+}
+function switchTab(t) { tab = t; applyTab(); window.scrollTo(0, 0); }
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+// Daftar unit yang sudah dicek di server (dari semua perangkat), disimpan juga untuk dipakai offline
+async function syncDone() {
+  if (!navigator.onLine || !configured()) return;
+  try {
+    const j = await (await fetch(GAS_URL + '?action=opnamelist')).json();
+    if (j.ok && Array.isArray(j.rows)) {
+      doneServer = j.rows;
+      await run(META, 'readwrite', s => s.put({ id: 'done', rows: j.rows, at: new Date().toISOString() }));
+      refreshProgress();
+    }
+  } catch (_) {}
+  await syncGudang();
+}
+
+// Unit master dianggap sudah opname jika Engine/Chasis-nya ada di hasil perangkat ini atau di server
+async function computeProgress() {
+  const dE = new Set(), dC = new Set();
+  const add = (e, c) => { const ne = norm(e), nc = norm(c); if (ne) dE.add(ne); if (nc) dC.add(nc); };
+  (await allRecs()).forEach(r => add(r.engineNo, r.chasisNo));
+  doneServer.forEach(x => add(x.e, x.c));
+  const rows = unitList;
+  const belum = [];
+  let sudah = 0;
+  for (const r of rows) {
+    const ne = norm(r.e), nc = norm(r.c);
+    if ((ne && dE.has(ne)) || (nc && dC.has(nc))) sudah++; else belum.push(r);
+  }
+  return { total: rows.length, sudah, belum };
+}
+async function refreshProgress(redraw = true) {
+  try {
+    const b = belumCache = await computeProgress();
+    const n = x => x.toLocaleString('id-ID');
+    $('progres').textContent = b.total
+      ? `Total ${n(b.total)} unit. Sudah opname ${n(b.sudah)} (${Math.round(b.sudah * 100 / b.total)}%), belum ${n(b.belum.length)}.`
+      : '';
+    if (redraw && session && tab === 'belum') renderBelum(false);
+  } catch (_) {}
+}
+
+async function renderBelum(fresh) {
+  if (fresh || !belumCache) await refreshProgress(false);
+  const b = belumCache;
+  if (!b) return;
+  const whSel = $('belumWh'), q = $('belumQ').value.trim().toLowerCase();
+  const whOf = r => (r.w || '').trim() || '-';
+  const whName = w => w === '-' ? 'Warehouse tidak tercantum' : w;
+  const warehouses = [...new Set(b.belum.map(whOf))].sort((x, y) => x.localeCompare(y, 'id'));
+  const prev = whSel.value;
+  whSel.textContent = '';
+  whSel.append(new Option('Semua warehouse', ''));
+  warehouses.forEach(w => whSel.append(new Option(whName(w), w)));
+  if (warehouses.includes(prev)) whSel.value = prev;
+
+  const list = b.belum.filter(r => (!whSel.value || whOf(r) === whSel.value) &&
+    (!q || `${r.e} ${r.c} ${r.t}`.toLowerCase().includes(q)));
+  $('belumStat').textContent = `${list.length.toLocaleString('id-ID')} dari ${b.belum.length.toLocaleString('id-ID')} unit belum opname`;
+
+  const box = $('belumList');
+  box.textContent = '';
+  const note = t => { const p = document.createElement('p'); p.className = 'empty'; p.textContent = t; box.append(p); };
+  if (!list.length) return note(!b.total ? 'Master belum diunggah.' : b.belum.length ? 'Tidak ada unit yang cocok dengan filter.' : 'Semua unit di master sudah diopname.');
+
+  const MAX = 150, groups = new Map();
+  list.slice(0, MAX).forEach(r => { const k = whOf(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+  for (const [k, items] of [...groups].sort((x, y) => x[0].localeCompare(y[0], 'id'))) {
+    const h = document.createElement('div'); h.className = 'grp'; h.textContent = `${whName(k)} (${items.length})`;
+    box.append(h);
+    for (const r of items) {
+      const row = document.createElement('div'); row.className = 'bitem';
+      const info = document.createElement('div');
+      const a = document.createElement('div'); a.className = 't mono'; a.textContent = r.e || '-';
+      const c = document.createElement('div'); c.className = 'm mono'; c.textContent = r.c || '-';
+      const t = document.createElement('div'); t.className = 'm'; t.textContent = r.t || '-';
+      info.append(a, c, t);
+      Object.keys(r.wt || {}).sort().forEach(k => info.append(mk('div', 'm', `Warehouse ${k}: ${r.wt[k]}`)));
+      if (r.sumber) info.append(mk('div', 'm', `Tidak terdata di File 1 (dari File ke-${r.sumber})`));
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ghost'; btn.textContent = 'Periksa';
+      btn.addEventListener('click', () => periksa(r));
+      row.append(info, btn);
+      box.append(row);
+    }
+  }
+  if (list.length > MAX) note(`Menampilkan ${MAX} pertama. Gunakan filter atau pencarian untuk mempersempit.`);
+}
+function periksa(r) {
+  $('engine').value = (r.e || '').toUpperCase();
+  $('chasis').value = (r.c || '').toUpperCase();
+  suggest('e'); suggest('c');
+  switchTab('opname');
+  validate();
+}
+$('belumRefresh').addEventListener('click', async () => { await syncDone(); renderBelum(true); });
+$('belumWh').addEventListener('change', () => renderBelum(false));
+$('belumQ').addEventListener('input', () => renderBelum(false));
+
+/* ---------- Rekap Audit KSU ---------- */
+let gudangServer = [], rekapData = null;
+const KSU_URUT = ['spion', 'aki', 'toolkit', 'plat_holder', 'helm', 'safety_riding']; // urutan karakter 0/1 dari server
+const KAT = [
+  { key: 'Aki', title: 'AKI / ACCU MOTOR', short: 'ACCU' },
+  { key: 'Helm', title: 'HELM', short: 'Helm' },
+  { key: 'Spion', title: 'SPION', short: 'Spion' },
+  { key: 'ToolKit', title: 'TOOL KIT', short: 'TOOLKIT' },
+  { key: 'PlatHolder', title: 'PLAT HOLDER', short: 'PLAT HOLDER' },
+  { key: 'SafetyRiding', title: 'SAFETY RIDING', short: 'SAFETY RIDING' }
+];
+const rupiah = v => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (_) { return {}; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
+const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const gudangAll = () => run('gudang', 'readonly', s => s.getAll());
+const gudangPut = g => run('gudang', 'readwrite', s => s.put(g));
+const gudangDel = id => run('gudang', 'readwrite', s => s.delete(id));
+
+// Awalan mesin yang tidak ada di tabel dihitung sebagai spesifikasi default (sama seperti file asli)
+function specRekap(e) {
+  const s = specKSU(e);
+  if (s) return s;
+  return { prefix: norm(e).substring(0, 3) || '-', aki: '3A/4V', helm: 'TRX3/HMJ', spion: 'BEAT (K1AL)', unknown: true };
+}
+
+// Hasil opname per unit: dari server (semua perangkat), lalu ditimpa hasil di perangkat ini
+async function hasilMap() {
+  const hE = new Map(), hC = new Map();
+  const put = (e, c, v) => { const ne = norm(e), nc = norm(c); if (ne) hE.set(ne, v); if (nc) hC.set(nc, v); };
+  for (const x of doneServer) {
+    if (!x.s) continue;
+    const ksu = {};
+    KSU_URUT.forEach((n, i) => { ksu[n] = (x.k || '')[i] === '1'; });
+    put(x.e, x.c, { e: x.e, c: x.c, ksu, status: x.s, petugas: x.p, kondisi: x.d, waktu: x.t });
+  }
+  (await allRecs()).filter(r => r.statusOpname).forEach(r => put(r.engineNo, r.chasisNo, {
+    e: r.engineNo, c: r.chasisNo, ksu: r.ksu || {}, status: r.statusOpname, petugas: r.petugas,
+    kondisi: r.kondisi, waktu: r.dibuat, foto: !!r.foto
+  }));
+  return [hE, hC];
+}
+
+async function hitungRekap() {
+  const units = master ? master.rows : [];
+  const [hE, hC] = await hasilMap();
+  const sis = {}, uni = {}, gud = {};
+  KAT.forEach(k => {
+    sis[k.key] = {}; uni[k.key] = {}; gud[k.key] = {};
+    (opsiJenis[k.key] || []).forEach(j => { sis[k.key][j] = 0; uni[k.key][j] = 0; gud[k.key][j] = 0; });
+  });
+  let unknown = 0, terperiksa = 0, exTK = 0, exPH = 0;
+  for (const u of units) {
+    const sp = specRekap(u.e);
+    if (sp.unknown) unknown++;
+    if (['EF4', 'EF2'].includes(sp.prefix)) exTK++;
+    if (['EF4', 'EF3', 'EF2', 'EF32'].includes(sp.prefix)) exPH++;
+    if (sis.Aki[sp.aki] !== undefined) sis.Aki[sp.aki]++;
+    if (sis.Helm[sp.helm] !== undefined) sis.Helm[sp.helm]++;
+    if (sis.Spion[sp.spion] !== undefined) sis.Spion[sp.spion]++;
+    if (sp.aki === 'ICON E') uni.Aki['ICON E']++;
+    const h = hE.get(norm(u.e)) || hC.get(norm(u.c));
+    if (!h) continue;
+    terperiksa++;
+    const k = h.ksu || {};
+    if (k.aki && sp.aki !== 'ICON E' && uni.Aki[sp.aki] !== undefined) uni.Aki[sp.aki]++;
+    if (k.helm && uni.Helm[sp.helm] !== undefined) uni.Helm[sp.helm]++;
+    if (k.spion && uni.Spion[sp.spion] !== undefined) uni.Spion[sp.spion]++;
+    if (k.toolkit) uni.ToolKit['Tool Kit Standard']++;
+    if (k.plat_holder) uni.PlatHolder['Plat Holder Standard']++;
+    if (k.safety_riding) uni.SafetyRiding['Apparel / Kit Safety Riding']++;
+  }
+  sis.ToolKit['Tool Kit Standard'] = units.length - exTK;
+  sis.PlatHolder['Plat Holder Standard'] = units.length - exPH;
+  sis.SafetyRiding['Apparel / Kit Safety Riding'] = units.length;
+
+  // Fisik gudang: gabungan server dan perangkat ini (tanpa hitung ganda berdasarkan ID)
+  const gm = new Map();
+  gudangServer.forEach(x => gm.set(x.id, { kategori: x.k, jenis: x.j, qty: x.q }));
+  (await gudangAll()).forEach(x => gm.set(x.id, x));
+  gm.forEach(g => { if (gud[g.kategori]) gud[g.kategori][g.jenis] = (gud[g.kategori][g.jenis] || 0) + (Number(g.qty) || 0); });
+
+  const kat = KAT.map(k => ({
+    ...k,
+    rows: (opsiJenis[k.key] || []).map(j => {
+      const s = sis[k.key][j] || 0, u = uni[k.key][j] || 0, g = gud[k.key][j] || 0, sel = g + u - s;
+      return { jenis: j, s, u, g, sel, st: sel > 0 ? 'Plus' : sel < 0 ? 'Minus' : 'Sesuai' };
+    })
+  }));
+  return { kat, unknown, total: units.length, terperiksa, gudangN: gm.size };
+}
+
+// Susun 4 tabel laporan: Aki, Helm, Spion, lalu gabungan Tool Kit / Plat Holder / Safety Riding
+function buildCards(d) {
+  const rank = r => r.st === 'Minus' ? 0 : r.st === 'Plus' ? 1 : 2;
+  const sorter = (a, b) => rank(a) - rank(b) ||
+    (a.st === 'Minus' ? a.sel - b.sel : a.st === 'Plus' ? b.sel - a.sel : a.jenis.localeCompare(b.jenis, 'id'));
+  const sum = rows => rows.reduce((t, r) => ({ s: t.s + r.s, u: t.u + r.u, g: t.g + r.g }), { s: 0, u: 0, g: 0 });
+  const by = key => d.kat.find(k => k.key === key);
+  const single = (n, key) => {
+    const k = by(key), rows = [...k.rows].sort(sorter), t = sum(rows);
+    return { title: `${n}. ${k.title}`, hasTotal: true, groups: [{ kat: k, rows }], tot: { ...t, sel: t.g + t.u - t.s } };
+  };
+  const comb = ['ToolKit', 'PlatHolder', 'SafetyRiding'].map(by);
+  const all = comb.flatMap(k => k.rows);
+  return [
+    single(1, 'Aki'), single(2, 'Helm'), single(3, 'Spion'),
+    { title: '4. TOOL KIT, PLAT HOLDER & SAFETY RIDING', hasTotal: false,
+      groups: comb.map(k => ({ kat: k, rows: k.rows, head: true })),
+      tot: { ...sum(all), sel: all.reduce((t, r) => t + r.sel, 0) } }
+  ];
+}
+
+function cardEl(card) {
+  const wrap = mk('div', 'cardx');
+  const bar = mk('div', 'bar2');
+  bar.append(mk('div', '', card.title), mk('div', '', 'SATUAN: PCS'));
+  wrap.append(bar);
+  const tw = mk('div', 'twrap'), t = mk('table', 'rk');
+  const hr = mk('tr');
+  ['NO', 'JENIS / TIPE', 'STOK SISTEM', 'TERPASANG UNIT', 'FISIK GUDANG', 'SELISIH', 'STATUS'].forEach(h => hr.append(mk('th', '', h)));
+  const th = mk('thead'); th.append(hr); t.append(th);
+  const tb = mk('tbody');
+  for (const g of card.groups) {
+    let n = 0;
+    if (g.head) {
+      const tr = mk('tr', 'cat'), td = mk('td', '', `${KAT.indexOf(g.kat) + 1}. ${g.kat.title}`);
+      td.colSpan = 7; tr.append(td); tb.append(tr);
+    }
+    g.rows.forEach(r => {
+      const tr = mk('tr', r.st === 'Minus' ? 'minus' : r.st === 'Plus' ? 'plus' : '');
+      [++n, r.jenis, r.s, r.u, r.g, r.sel, r.st].forEach(v => tr.append(mk('td', '', v)));
+      tb.append(tr);
+    });
+  }
+  if (card.hasTotal) {
+    const tr = mk('tr', 'tot'), td = mk('td', '', 'TOTAL AKHIR');
+    td.colSpan = 2; tr.append(td);
+    [card.tot.s, card.tot.u, card.tot.g, card.tot.sel, ''].forEach(v => tr.append(mk('td', '', v)));
+    tb.append(tr);
+  }
+  t.append(tb); tw.append(t); wrap.append(tw);
+  return wrap;
+}
+
+function renderKesimpulan(cards) {
+  const box = $('rekapKesimpulan');
+  box.textContent = '';
+  const kecil = ['ToolKit', 'PlatHolder', 'SafetyRiding'];
+  const data = cards.map(c => {
+    const items = [];
+    c.groups.forEach(g => g.rows.forEach(r => {
+      if (r.sel !== 0) items.push({ label: kecil.includes(g.kat.key) ? g.kat.short : `${g.kat.short} ${r.jenis}`, sel: r.sel });
+    }));
+    return { title: c.title, total: c.tot.sel, items };
+  });
+  const cls = n => n < 0 ? 'neg' : n > 0 ? 'pos' : '';
+  const badge = n => n < 0 ? 'MINUS' : n > 0 ? 'PLUS' : 'SESUAI';
+  const h = mk('h2', '', 'Kesimpulan'); box.append(h);
+  data.forEach(d => {
+    const c = mk('div', 'kes'), head = mk('div', 'kh');
+    head.append(mk('span', '', d.title), mk('span', cls(d.total), badge(d.total)));
+    const p = mk('div');
+    p.append('Ditemukan selisih KSU dengan rincian: ');
+    if (!d.items.length) p.append('tidak ditemukan selisih');
+    d.items.forEach((it, i) => {
+      if (i) p.append(', ');
+      p.append(mk('b', '', it.label), ' ', mk('span', cls(it.sel), `${it.sel} pcs`));
+    });
+    p.append('. ', mk('b', '', 'Total akhir:'), ' ', mk('span', cls(d.total), String(d.total)));
+    c.append(head, p); box.append(c);
+  });
+  const grand = data.reduce((t, d) => t + d.total, 0);
+  const minus = data.reduce((t, d) => t + d.items.filter(i => i.sel < 0).reduce((s, i) => s + i.sel, 0), 0);
+  const plus = data.reduce((t, d) => t + d.items.filter(i => i.sel > 0).reduce((s, i) => s + i.sel, 0), 0);
+  const sum = mk('div', 'kes sum');
+  sum.append(
+    mk('div', '', `${data.filter(d => d.total < 0).length} kategori minus, ${data.filter(d => d.total > 0).length} kategori plus`),
+    mk('div', '', `Akumulasi selisih: ${minus} (minus) dan +${plus} (plus)`)
+  );
+  const g = mk('div', 'kh'); g.style.marginTop = '6px';
+  g.append(mk('span', '', 'Total keseluruhan selisih'), mk('span', cls(grand), `${grand} pcs`));
+  sum.append(g); box.append(sum);
+}
+
+// Daftar barang minus/plus: tampil jika ada selisih minus. Kartu Tool Kit/Plat Holder/Safety Riding hanya menampilkan minus.
+function buildMinus(cards) {
+  if (!cards.some(c => c.groups.some(g => g.rows.some(r => r.sel < 0)))) return [];
+  const prices = lsGet('ksu_harga_barang_minus'), codes = lsGet('ksu_kode_sparepart_minus');
+  const out = [];
+  let no = 0;
+  for (const c of cards) {
+    if (c.hasTotal && c.tot.sel >= 0) continue;
+    const allow = c.hasTotal ? ['Minus', 'Plus'] : ['Minus'];
+    for (const g of c.groups) for (const r of g.rows) {
+      if (!allow.includes(r.st)) continue;
+      const key = `${g.kat.key}|${r.jenis}`;
+      out.push({ no: ++no, card: c.title, kategori: g.kat.key, jenis: r.jenis, sel: r.sel, jumlah: Math.abs(r.sel),
+        st: r.st, key, harga: prices[key] ?? '', kode: codes[key] || '' });
+    }
+  }
+  return out;
+}
+const netMinus = items => items.reduce((t, i) => i.harga === '' ? t : t + (i.st === 'Plus' ? 1 : -1) * i.jumlah * Number(i.harga), 0);
+
+function renderMinus(items) {
+  const box = $('minusList');
+  box.textContent = '';
+  const upd = () => {
+    const mn = items.filter(i => i.st === 'Minus').length, pl = items.length - mn;
+    $('minusStat').textContent = items.length ? `${mn} Minus, ${pl} Plus. Total bersih: ${rupiah(netMinus(items))}` : 'Belum ada selisih minus pada Rekap Audit KSU.';
+    $('minusTotal').textContent = items.length ? `TOTAL KESELURUHAN HARGA: ${rupiah(netMinus(items))}` : '';
+  };
+  if (!items.length) { upd(); return; }
+  const groups = new Map();
+  items.forEach(i => { if (!groups.has(i.card)) groups.set(i.card, []); groups.get(i.card).push(i); });
+  for (const [title, list] of groups) {
+    const wrap = mk('div', 'cardx'), bar = mk('div', 'bar2');
+    bar.append(mk('div', '', title), mk('div', '', 'SATUAN: PCS'));
+    const tw = mk('div', 'twrap'), t = mk('table', 'rk'), hr = mk('tr');
+    ['NO', 'JENIS / TIPE', 'SELISIH', 'HARGA SATUAN', 'KODE SPAREPART', 'TOTAL HARGA'].forEach(h => hr.append(mk('th', '', h)));
+    const th = mk('thead'); th.append(hr); t.append(th);
+    const tb = mk('tbody');
+    list.forEach(i => {
+      const tr = mk('tr', i.st === 'Minus' ? 'minus' : 'plus');
+      const out = mk('td', '', i.harga === '' ? '-' : rupiah(i.jumlah * Number(i.harga)));
+      const pIn = document.createElement('input');
+      pIn.type = 'number'; pIn.min = '0'; pIn.step = '1'; pIn.inputMode = 'numeric'; pIn.value = i.harga;
+      pIn.setAttribute('aria-label', 'Harga satuan ' + i.jenis);
+      pIn.addEventListener('input', () => {
+        i.harga = pIn.value === '' ? '' : Number(pIn.value);
+        const st = lsGet('ksu_harga_barang_minus');
+        if (i.harga === '') delete st[i.key]; else st[i.key] = i.harga;
+        lsSet('ksu_harga_barang_minus', st);
+        out.textContent = i.harga === '' ? '-' : rupiah(i.jumlah * i.harga);
+        upd();
+      });
+      const kIn = document.createElement('input');
+      kIn.type = 'text'; kIn.value = i.kode; kIn.style.textAlign = 'left';
+      kIn.setAttribute('aria-label', 'Kode sparepart ' + i.jenis);
+      kIn.addEventListener('input', () => {
+        i.kode = kIn.value.trim();
+        const st = lsGet('ksu_kode_sparepart_minus');
+        if (!i.kode) delete st[i.key]; else st[i.key] = i.kode;
+        lsSet('ksu_kode_sparepart_minus', st);
+      });
+      const tdP = mk('td'), tdK = mk('td');
+      tdP.append(pIn); tdK.append(kIn);
+      tr.append(mk('td', '', i.no), mk('td', '', i.jenis), mk('td', '', i.sel), tdP, tdK, out);
+      tb.append(tr);
+    });
+    t.append(tb); tw.append(t); wrap.append(bar, tw); box.append(wrap);
+  }
+  upd();
+}
+
+async function renderRekap() {
+  const d = rekapData = await hitungRekap();
+  const tgl = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+  $('printMeta').textContent = `Tanggal: ${tgl}. Cabang: ${session ? session.cabang : '-'}. Petugas: ${session ? session.nama : '-'}`;
+  $('rekapInfo').textContent = !master
+    ? 'Master belum diunggah, rekap belum bisa dihitung.'
+    : `Master ${d.total.toLocaleString('id-ID')} unit, sudah diperiksa ${d.terperiksa.toLocaleString('id-ID')}. Entri fisik gudang: ${d.gudangN}.` +
+      (d.unknown ? ` ${d.unknown} unit berawalan mesin yang tidak ada di tabel KSU dihitung memakai spesifikasi default (Aki 3A/4V, Helm TRX3/HMJ, Spion BEAT K1AL).` : '');
+  const tables = $('rekapTables');
+  tables.textContent = '';
+  const cards = buildCards(d);
+  if (master) cards.forEach(c => tables.append(cardEl(c)));
+  renderKesimpulan(master ? cards : []);
+  renderMinus(master ? buildMinus(cards) : []);
+  renderGudangList();
+}
+
+/* ---------- Fisik KSU gudang ---------- */
+function fillJenis() {
+  const sel = $('gJenis');
+  sel.textContent = '';
+  (opsiJenis[$('gKat').value] || []).forEach(j => sel.append(new Option(j, j)));
+}
+$('gKat').addEventListener('change', fillJenis);
+fillJenis();
+
+async function pushGudang() {
+  if (!navigator.onLine || !configured() || !session) return;
+  for (const g of await gudangAll()) {
+    if (g.synced) continue;
+    try {
+      const j = await callGas({ action: 'gudangAdd', id: g.id, kategori: g.kategori, jenis: g.jenis, qty: g.qty,
+        catatan: g.catatan, waktu: g.waktu, petugas: session.nama, kodeCabang: session.cabang, ticket: session.ticket });
+      if (j.ok) { g.synced = true; await gudangPut(g); }
+    } catch (_) {}
+  }
+}
+async function syncGudang() {
+  await pushGudang();
+  if (!navigator.onLine || !configured()) return;
+  try {
+    const j = await (await fetch(GAS_URL + '?action=gudanglist')).json();
+    if (j.ok && Array.isArray(j.rows)) {
+      gudangServer = j.rows;
+      await run(META, 'readwrite', s => s.put({ id: 'gudangServer', rows: j.rows }));
+    }
+  } catch (_) {}
+}
+
+$('gudangForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const qty = parseInt($('gQty').value, 10);
+  if (!(qty > 0)) return toast('Jumlah harus lebih dari 0.', true);
+  await gudangPut({ id: uid(), kategori: $('gKat').value, jenis: $('gJenis').value, qty,
+    catatan: $('gCat').value.trim(), waktu: new Date().toISOString(), synced: false });
+  $('gQty').value = 1; $('gCat').value = '';
+  toast('Fisik gudang tersimpan.');
+  await pushGudang();
+  renderRekap();
+});
+
+async function renderGudangList() {
+  const box = $('gudangList');
+  box.textContent = '';
+  const data = (await gudangAll()).sort((a, b) => b.waktu.localeCompare(a.waktu)).slice(0, 10);
+  if (!data.length) { box.append(mk('p', 'empty', 'Belum ada entri fisik gudang di perangkat ini.')); return; }
+  for (const g of data) {
+    const row = mk('div', 'bitem'), info = mk('div');
+    info.append(mk('div', 't', `${g.kategori} - ${g.jenis}`),
+      mk('div', 'm', `${g.qty} pcs. ${g.catatan || 'Tanpa catatan'}`));
+    info.append(mkBadge(g.synced ? 'Terkirim' : 'Tertunda', g.synced ? 'synced' : 'pending'));
+    const b = mk('button', 'x', 'Hapus'); b.type = 'button';
+    b.addEventListener('click', () => hapusGudang(g));
+    row.append(info, b); box.append(row);
+  }
+}
+async function hapusGudang(g) {
+  if (!confirm('Hapus entri fisik gudang ini?')) return;
+  if (g.synced) {
+    if (!navigator.onLine || !configured() || !session) return toast('Entri ini sudah terkirim. Menghapusnya butuh koneksi internet.', true);
+    try {
+      const j = await callGas({ action: 'gudangDel', id: g.id, petugas: session.nama, kodeCabang: session.cabang, ticket: session.ticket });
+      if (!j.ok) throw new Error(j.error || 'ditolak server');
+    } catch (err) { return toast('Gagal menghapus di server: ' + err.message, true); }
+    gudangServer = gudangServer.filter(x => x.id !== g.id);
+  }
+  await gudangDel(g.id);
+  renderRekap();
+}
+
+$('rekapRefresh').addEventListener('click', async () => { await syncDone(); renderRekap(); });
+$('rekapPrint').addEventListener('click', () => window.print());
+
+/* ---------- Unduh Excel rekap ---------- */
+async function unduhExcelRekap() {
+  if (typeof ExcelJS === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!master) return toast('Master belum diunggah.', true);
+  const d = await hitungRekap(), cards = buildCards(d), minus = buildMinus(cards);
+  const wb = new ExcelJS.Workbook();
+  const thin = { style: 'thin', color: { argb: 'FF9AA3A5' } }, bd = { top: thin, left: thin, bottom: thin, right: thin };
+  const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const tgl = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+
+  const ws = wb.addWorksheet('Rekap KSU');
+  ws.columns = [{ width: 6 }, { width: 40 }, { width: 14 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 12 }];
+  ws.mergeCells('A1:G1');
+  ws.getCell('A1').value = 'BERITA ACARA AUDIT STOK KSU';
+  ws.getCell('A1').font = { bold: true, size: 14 }; ws.getCell('A1').alignment = { horizontal: 'center' };
+  ws.mergeCells('A2:G2');
+  ws.getCell('A2').value = `Tanggal: ${tgl}. Cabang: ${session ? session.cabang : '-'}. Petugas: ${session ? session.nama : '-'}`;
+  ws.getCell('A2').alignment = { horizontal: 'center' };
+  let r = 4;
+  for (const c of cards) {
+    ws.mergeCells(`A${r}:G${r}`);
+    const tc = ws.getCell(`A${r}`);
+    tc.value = c.title; tc.font = { bold: true, color: { argb: 'FFFFFFFF' } }; tc.fill = fill('FF1C2B2E'); r++;
+    const hdr = ws.getRow(r);
+    hdr.values = ['NO', 'JENIS / TIPE', 'STOK SISTEM', 'TERPASANG UNIT', 'FISIK GUDANG', 'SELISIH', 'STATUS'];
+    hdr.eachCell(cl => { cl.font = { bold: true }; cl.fill = fill('FFF1F2EE'); cl.border = bd; cl.alignment = { horizontal: 'center' }; });
+    r++;
+    for (const g of c.groups) {
+      let n = 0;
+      if (g.head) {
+        ws.mergeCells(`A${r}:G${r}`);
+        const cl = ws.getCell(`A${r}`);
+        cl.value = `${KAT.indexOf(g.kat) + 1}. ${g.kat.title}`; cl.font = { bold: true }; cl.fill = fill('FFE3E5E0'); r++;
+      }
+      for (const x of g.rows) {
+        const row = ws.getRow(r);
+        row.values = [++n, x.jenis, x.s, x.u, x.g, x.sel, x.st];
+        row.eachCell(cl => {
+          cl.border = bd;
+          if (x.st === 'Minus') cl.fill = fill('FFFBD5D1'); else if (x.st === 'Plus') cl.fill = fill('FFCFEEE6');
+        });
+        r++;
+      }
+    }
+    if (c.hasTotal) {
+      const row = ws.getRow(r);
+      row.values = ['', 'TOTAL AKHIR', c.tot.s, c.tot.u, c.tot.g, c.tot.sel, ''];
+      row.eachCell({ includeEmpty: true }, cl => { cl.font = { bold: true }; cl.border = bd; cl.fill = fill('FFF1F2EE'); });
+      r++;
+    }
+    r++;
+  }
+
+  const wm = wb.addWorksheet('Barang Minus');
+  wm.columns = [{ width: 6 }, { width: 16 }, { width: 38 }, { width: 10 }, { width: 10 }, { width: 10 }, { width: 16 }, { width: 20 }, { width: 18 }];
+  const mh = wm.getRow(1);
+  mh.values = ['NO', 'KATEGORI', 'JENIS / TIPE', 'STATUS', 'SELISIH', 'JUMLAH', 'HARGA SATUAN', 'KODE SPAREPART', 'TOTAL HARGA'];
+  mh.eachCell(cl => { cl.font = { bold: true }; cl.fill = fill('FFF1F2EE'); cl.border = bd; });
+  minus.forEach((i, k) => {
+    const row = wm.getRow(k + 2);
+    row.values = [i.no, i.kategori, i.jenis, i.st, i.sel, i.jumlah, i.harga === '' ? null : i.harga, i.kode, i.harga === '' ? null : i.jumlah * i.harga];
+    row.eachCell({ includeEmpty: true }, cl => { cl.border = bd; cl.fill = fill(i.st === 'Minus' ? 'FFFBD5D1' : 'FFCFEEE6'); });
+    row.getCell(7).numFmt = '#,##0'; row.getCell(9).numFmt = '#,##0';
+  });
+  const tr = wm.getRow(minus.length + 3);
+  tr.values = ['', '', 'TOTAL BERSIH (plus dikurangi minus)', '', '', '', '', '', netMinus(minus)];
+  tr.font = { bold: true }; tr.getCell(9).numFmt = '#,##0';
+
+  const wg = wb.addWorksheet('Fisik Gudang');
+  wg.columns = [{ width: 22 }, { width: 16 }, { width: 38 }, { width: 10 }, { width: 30 }];
+  const gh = wg.getRow(1);
+  gh.values = ['WAKTU', 'KATEGORI', 'JENIS / TIPE', 'JUMLAH', 'CATATAN'];
+  gh.eachCell(cl => { cl.font = { bold: true }; cl.fill = fill('FFF1F2EE'); cl.border = bd; });
+  const gm = new Map();
+  gudangServer.forEach(x => gm.set(x.id, { waktu: '', kategori: x.k, jenis: x.j, qty: x.q, catatan: x.c }));
+  (await gudangAll()).forEach(x => gm.set(x.id, x));
+  [...gm.values()].forEach((g, k) => {
+    const row = wg.getRow(k + 2);
+    row.values = [g.waktu ? new Date(g.waktu).toLocaleString('id-ID') : '', g.kategori, g.jenis, g.qty, g.catatan || ''];
+    row.eachCell({ includeEmpty: true }, cl => { cl.border = bd; });
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `rekap-audit-ksu-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  toast('Excel rekap diunduh.');
+}
+$('rekapXlsx').addEventListener('click', async () => {
+  const b = $('rekapXlsx');
+  b.disabled = true;
+  try { await unduhExcelRekap(); } catch (e) { toast('Gagal membuat Excel: ' + (e && e.message || e), true); }
+  finally { b.disabled = false; }
+});
+
+/* ---------- Warehouse pendukung (file ke-2 sampai ke-6) ---------- */
+const WAREHOUSE_TIDAK_TERDATA = 'Tidak Terdata di File 1';
+let unitList = [], wh = { version: null, slots: {} }, whStats = {};
+const saveWh = () => run(META, 'readwrite', s => s.put({ id: 'wh', version: wh.version, slots: wh.slots }));
+
+// Gabungkan master (file 1) dengan file pendukung per urutan nomor. Unit yang tidak ada di master ditambahkan sebagai unit baru.
+function buildUnits() {
+  whStats = {};
+  if (!master) return [];
+  const pool = master.rows.map(r => ({ ...r, wt: {}, sumber: null, fw: r.w }));
+  const byR = new Map(), byM = new Map();
+  const idx = u => { const r = norm(u.c), m = norm(u.e); if (r) byR.set(r, u); if (m) byM.set(m, u); };
+  pool.forEach(idx);
+  for (const slot of Object.keys(wh.slots).sort()) {
+    const st = whStats[slot] = { cocok: 0, baru: 0, ganda: 0 };
+    const baru = [], keys = new Set();
+    for (const row of wh.slots[slot].rows) {
+      const r = norm(row.c), m = norm(row.e);
+      let t = null;
+      if (r && m) { const a = byR.get(r), b = byM.get(m); if (a && b && a === b) t = a; }
+      else if (r) t = byR.get(r);
+      else if (m) t = byM.get(m);
+      if (!t && ((r && byR.has(r)) || (m && byM.has(m)))) t = byR.get(r) || byM.get(m); // salah satu identitas sudah terdaftar
+      if (t) { t.wt[slot] = row.w; st.cocok++; continue; }
+      if (!r && !m) continue;
+      const key = `${r || '-'}|${m || '-'}`;
+      if (keys.has(key)) { st.ganda++; continue; }
+      keys.add(key);
+      baru.push({ e: row.e, c: row.c, t: row.t || 'Unit Motor', w: WAREHOUSE_TIDAK_TERDATA, wt: { [slot]: row.w }, sumber: Number(slot), fw: row.w });
+      st.baru++;
+    }
+    baru.forEach(u => { pool.push(u); idx(u); });
+  }
+  return pool;
+}
+
+function rebuildIndex(refresh = true) {
+  unitList = buildUnits();
+  byE.clear(); byC.clear(); sugIdx.length = 0;
+  for (const r of unitList) {
+    const e = norm(r.e), c = norm(r.c);
+    if (e) byE.set(e, r);
+    if (c) byC.set(c, r);
+    sugIdx.push({ r, e, c });
+  }
+  if (refresh) { refreshProgress(); validate(); }
+}
+
+function parseWh(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
+  const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: false });
+  if (!data.length) throw new Error('File pendukung kosong.');
+  const rows = [];
+  let tanpa = 0;
+  for (const row of data) {
+    let c = '', e = '', w = '', t = '';
+    for (const key of Object.keys(row)) {
+      const k = hkey(key), v = String(row[key] == null ? '' : row[key]).trim();
+      if (k.includes('rangka') || k.includes('chasis') || k.includes('chassis') || k.includes('frame')) c = v;
+      else if (k.includes('mesin') || k.includes('engine')) e = v;
+      else if (k.includes('warehouse') || k.includes('lokasi')) w = v;
+      else if (k.includes('tipe') || k.includes('type') || k.includes('model')) t = v;
+    }
+    if (!w) { tanpa++; continue; } // baris tanpa warehouse/lokasi diabaikan
+    rows.push({ e, c, t, w });
+  }
+  return { rows, tanpa, total: data.length };
+}
+
+async function uploadWhToServer(slot, data) {
+  for (let i = 0; i < 2; i++) {
+    const j = await callGas({ action: 'uploadWarehouse', key: adminKey, slot, fileName: data.fileName, rows: data.rows });
+    if (j.ok) return j;
+    if (j.code === 'key_required' && i === 0) {
+      adminKey = prompt('Masukkan kunci admin untuk membagikan data ini ke semua perangkat:') || '';
+      if (!adminKey) throw new Error('dibatalkan.');
+      continue;
+    }
+    throw new Error(j.error || 'server menolak.');
+  }
+}
+
+async function syncWh(force) {
+  if (!navigator.onLine || !configured()) { if (force) toast('Perlu online dan GAS_URL terisi.', true); return; }
+  try {
+    const info = await (await fetch(GAS_URL + '?action=whinfo')).json();
+    if (!info.ok) return;
+    if (!force && info.version === wh.version) return;
+    const full = await (await fetch(GAS_URL + '?action=wh')).json();
+    if (!full.ok || !full.slots) throw new Error('respons tidak valid');
+    const next = {};
+    for (const k of Object.keys(wh.slots)) if (wh.slots[k].pending) next[k] = wh.slots[k]; // yang belum terbagikan tidak ditimpa
+    for (const k of Object.keys(full.slots)) if (!next[k]) next[k] = { fileName: full.slots[k].fileName, rows: full.slots[k].rows };
+    wh = { version: full.version || null, slots: next };
+    await saveWh();
+    rebuildIndex();
+    renderWhList();
+  } catch (err) { if (force) toast('Gagal memuat warehouse pendukung: ' + err.message, true); }
+}
+
+function renderWhList() {
+  const box = $('whList');
+  box.textContent = '';
+  const slots = Object.keys(wh.slots).sort();
+  if (!slots.length) { box.append(mk('p', 'empty', 'Belum ada file warehouse pendukung.')); return; }
+  for (const k of slots) {
+    const s = wh.slots[k], st = whStats[k];
+    const row = mk('div', 'bitem'), info = mk('div');
+    info.append(mk('div', 't', `File ke-${k}: ${s.fileName || '-'}`),
+      mk('div', 'm', `${s.rows.length} baris` + (st ? `, ${st.cocok} cocok, ${st.baru} unit baru` + (st.ganda ? `, ${st.ganda} ganda dilewati` : '') : '')));
+    if (s.pending) info.append(mkBadge('Belum dibagikan', 'pending'));
+    const b = mk('button', 'x', 'Hapus'); b.type = 'button';
+    b.addEventListener('click', () => hapusWhSlot(k));
+    row.append(info, b);
+    box.append(row);
+  }
+}
+
+async function hapusWhSlot(slot) {
+  if (!confirm(`Hapus data Warehouse file ke-${slot}? Unit baru yang hanya ada di file ini ikut hilang dari daftar.`)) return;
+  if (!wh.slots[slot].pending) {
+    if (!navigator.onLine || !configured()) return toast('Menghapus data yang sudah dibagikan butuh koneksi internet.', true);
+    try { const j = await uploadWhToServer(slot, { fileName: '', rows: [] }); wh.version = j.version; }
+    catch (err) { return toast('Gagal menghapus di server: ' + err.message, true); }
+  }
+  delete wh.slots[slot];
+  await saveWh();
+  rebuildIndex();
+  renderWhList();
+}
+
+$('whBtn').addEventListener('click', () => $('whFile').click());
+$('whFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const slot = $('whSlot').value;
+  if (!master) return toast('Unggah master (file ke-1) lebih dulu.', true);
+  if (typeof XLSX === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  try {
+    const p = parseWh(await f.arrayBuffer());
+    if (!p.rows.length) throw new Error('Tidak ada baris yang punya kolom Warehouse/Lokasi.');
+    const data = { fileName: f.name, rows: p.rows };
+    let note = '';
+    if (navigator.onLine && configured()) {
+      try { const j = await uploadWhToServer(slot, data); wh.version = j.version; wh.slots[slot] = data; note = ' Dibagikan ke semua perangkat.'; }
+      catch (err) { wh.slots[slot] = { ...data, pending: true }; note = ' Belum terbagikan: ' + err.message; }
+    } else { wh.slots[slot] = { ...data, pending: true }; note = ' Belum dibagikan (offline).'; }
+    await saveWh();
+    rebuildIndex();
+    renderWhList();
+    const st = whStats[slot] || { cocok: 0, baru: 0 };
+    toast(`File ke-${slot}: ${st.cocok} unit cocok, ${st.baru} unit baru.` + (p.tanpa ? ` ${p.tanpa} baris tanpa warehouse dilewati.` : '') + note);
+  } catch (err) {
+    toast(err.message || 'Gagal membaca file.', true);
+  }
+});
+
+/* ---------- Ekspor hasil opname per unit ---------- */
+async function unduhHasilUnit() {
+  if (typeof XLSX === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!unitList.length) return toast('Belum ada data unit. Unggah master dulu.', true);
+  const [hE, hC] = await hasilMap();
+  const tick = v => v ? '✓' : '-';
+  const used = new Set();
+  const waktu = w => w ? new Date(w).toLocaleString('id-ID') : '-';
+  const rows = unitList.map(u => {
+    const h = hE.get(norm(u.e)) || hC.get(norm(u.c));
+    if (h) used.add(h);
+    const k = (h && h.ksu) || {}, wt = u.wt || {};
+    return {
+      'No. Rangka': u.c || '-', 'No. Mesin': u.e || '-', 'Tipe Unit': u.t || '-', 'Warehouse': u.w || '-',
+      'Warehouse 2': wt['2'] || '-', 'Warehouse 3': wt['3'] || '-', 'Warehouse 4': wt['4'] || '-',
+      'Warehouse 5': wt['5'] || '-', 'Warehouse 6': wt['6'] || '-',
+      'Status Opname': h ? h.status : 'Belum Opname',
+      'Sumber File': u.sumber ? `File ke-${u.sumber} (Warehouse Pendukung)` : 'File ke-1 (Master)',
+      'Spion': tick(h && k.spion), 'Aki': tick(h && k.aki), 'Tool Kit': tick(h && k.toolkit),
+      'Plat Holder': tick(h && k.plat_holder), 'Helm': tick(h && k.helm), 'Safety Riding': tick(h && k.safety_riding),
+      'Kondisi': (h && h.kondisi) || '-', 'Petugas': (h && h.petugas) || '-', 'Waktu Opname': h ? waktu(h.waktu) : '-',
+      'Ada Foto Bukti': !h ? 'Tidak' : h.foto === true ? 'Ya' : h.foto === false ? 'Tidak' : '-'
+    };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Opname Unit');
+
+  // Hasil opname yang nomornya tidak ada di master maupun warehouse pendukung
+  const luar = [...new Set([...hE.values(), ...hC.values()])].filter(h => !used.has(h)).map(h => {
+    const k = h.ksu || {};
+    return {
+      'No. Mesin': h.e || '-', 'No. Rangka': h.c || '-', 'Status Opname': h.status || '-',
+      'Spion': tick(k.spion), 'Aki': tick(k.aki), 'Tool Kit': tick(k.toolkit), 'Plat Holder': tick(k.plat_holder),
+      'Helm': tick(k.helm), 'Safety Riding': tick(k.safety_riding),
+      'Kondisi': h.kondisi || '-', 'Petugas': h.petugas || '-', 'Waktu Opname': waktu(h.waktu)
+    };
+  });
+  if (luar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(luar), 'Tidak Terdaftar');
+  XLSX.writeFile(wb, `Hasil_Opname_Unit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  toast(`Excel diunduh: ${rows.length} unit` + (luar.length ? `, ${luar.length} di luar daftar.` : '.'));
+}
+$('exportHasil').addEventListener('click', async () => {
+  const b = $('exportHasil');
+  b.disabled = true;
+  try { await unduhHasilUnit(); } catch (e) { toast('Gagal membuat Excel: ' + (e && e.message || e), true); }
+  finally { b.disabled = false; }
+});
+
 /* ---------- Mulai ---------- */
 (async function init() {
   $('cfgWarn').hidden = configured();
@@ -972,9 +1972,15 @@ $('sesiUbah').addEventListener('click', () => {
   try {
     db = await openDB();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+    try { const dn = await run(META, 'readonly', s => s.get('done')); if (dn) doneServer = dn.rows || []; } catch (_) {}
+    try { const gs = await run(META, 'readonly', s => s.get('gudangServer')); if (gs) gudangServer = gs.rows || []; } catch (_) {}
+    try { const w = await run(META, 'readonly', s => s.get('wh')); if (w) wh = { version: w.version || null, slots: w.slots || {} }; } catch (_) {}
     setMaster(await getMaster() || null);
+    renderWhList();
     await render();
     syncMaster(); // ambil master terbaru dari server bila online
+    syncWh();     // ambil warehouse pendukung
+    syncDone();   // ambil daftar unit yang sudah diopname semua perangkat
   } catch (e) {
     toast('IndexedDB tidak tersedia di browser ini.', true);
   }
