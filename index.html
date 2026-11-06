@@ -12,6 +12,7 @@
   body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
   .bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--ink);color:#fff}
   .bar h1{font-size:17px;margin:0;font-weight:650}
+  .bar h1 small{display:block;font-size:12px;font-weight:600;opacity:.8}
   .net{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--ok)}
   .net::before{content:"";width:8px;height:8px;border-radius:50%;background:#fff}
   .net.off{background:var(--warn)}
@@ -176,6 +177,9 @@
   .ui-box.done{border-color:#7cc3b2;background:#d9f1ea;color:#0a5246}
   .ui-box.done h4{color:#0a5246}
   .sug button.done{border-left:4px solid var(--ok);background:#f2faf7}
+  .luar-box{margin-top:8px;border:1.5px solid #e8c28a;background:#fff3e0;border-radius:8px;padding:8px 12px 12px}
+  .luar-chk{display:flex;gap:10px;align-items:center;margin:0;min-height:44px;font-size:15px;font-weight:700;color:#6b3d00;cursor:pointer}
+  .luar-chk input{width:22px;height:22px;flex:none}
   .empty{color:var(--muted);margin:4px 0}
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,480px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   #toast.show{opacity:1}
@@ -229,7 +233,7 @@
 <body>
 
 <header class="bar">
-  <h1>Stok Opname Cabang</h1>
+  <h1>Stok Opname Cabang<small id="roomTag"></small></h1>
   <div id="net" class="net" role="status">Online</div>
 </header>
 
@@ -237,6 +241,17 @@
   <div id="cfgWarn" class="notice" hidden>
     URL Google Apps Script belum diisi. Isi konstanta <b>GAS_URL</b> di bagian script, lalu muat ulang halaman.
   </div>
+
+  <section id="roomSec" hidden>
+    <form id="roomForm" autocomplete="off">
+      <h2>Masuk ke room</h2>
+      <p class="hint" style="margin:-4px 0 12px">Room memisahkan data antar cabang atau kegiatan opname, jadi master, hasil opname, dan rekap tidak tercampur. Minta kode room dari admin.</p>
+      <label for="roomCode" style="margin-top:0">Kode room</label>
+      <input id="roomCode" class="mono" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="24">
+      <div id="roomMsg" class="val bad" role="alert" hidden></div>
+      <button id="roomOk" class="full" type="submit">Lanjut ke login</button>
+    </form>
+  </section>
 
   <section id="sesi">
     <div id="sesiView" hidden>
@@ -248,6 +263,7 @@
     </div>
     <form id="loginForm" autocomplete="on">
       <h2>Masuk untuk memulai opname</h2>
+      <p class="hint" style="margin:-4px 0 10px">Room: <b id="loginRoom"></b></p>
       <label for="petugas" style="margin-top:0">Nama petugas</label>
       <input id="petugas" type="text" autocomplete="username">
       <label for="cabang">Kode cabang</label>
@@ -260,6 +276,7 @@
       </div>
       <div id="loginMsg" class="val bad" role="alert" hidden></div>
       <button id="sesiOk" class="full" type="submit">Masuk</button>
+      <button id="roomGanti" class="ghost full" type="button" style="margin-top:10px">Ganti room</button>
       <p class="hint">Nama dan cabang harus sudah didaftarkan admin. Password dibuat sendiri oleh petugas saat login pertama (butuh internet), dan hanya diketahui oleh petugas itu.</p>
     </form>
   </section>
@@ -291,6 +308,11 @@
 
       <div id="val" class="val" role="status" aria-live="polite">Isi Engine No atau Chasis No untuk validasi.</div>
       <div id="unitInfo" class="unit-info" hidden></div>
+      <div id="luarBox" class="luar-box" hidden>
+        <label class="luar-chk"><input id="luarChk" type="checkbox"><span>Tidak ada di data, perlu dicek ulang</span></label>
+        <p class="hint" style="margin:0 0 8px">Unit tetap bisa disimpan lengkap dengan foto dan KSU. Unit ditandai dan masuk daftar "Perlu cek ulang" di tab Belum opname.</p>
+        <input id="luarNote" type="text" placeholder="Catatan pengecekan ulang (opsional)" aria-label="Catatan pengecekan ulang">
+      </div>
 
       <div class="row">
         <div><label for="typeUnit">Type unit</label><input id="typeUnit" type="text"></div>
@@ -348,6 +370,10 @@
     <div class="head">
       <h2>Unit belum opname</h2>
       <button id="belumRefresh" class="ghost" type="button">Perbarui</button>
+    </div>
+    <div id="belumMode" class="tabs" style="margin-bottom:10px">
+      <button type="button" data-mode="belum" aria-selected="true">Belum opname</button>
+      <button type="button" data-mode="cek" aria-selected="false">Perlu cek ulang <span id="cekN"></span></button>
     </div>
     <p id="belumStat" class="m" style="margin:0 0 10px"></p>
     <div class="row" style="margin-bottom:6px">
@@ -538,7 +564,14 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxJzyeAXldEHX7CDcbjVoVspP9r9j2Y-F3_Ut2B4TVLAL2Jb8mXLKAXuaE_-yc1KQq4Zw/exec'; // URL "/exec" dari deployment Apps Script
 /* ===================================== */
 
-const DB_NAME = 'stok-opname', STORE = 'records', META = 'meta';
+// Room: pemisah data antar cabang/kegiatan. Semua data lokal (database) dan data server dipisah per room.
+const normRoom = s => String(s || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+let ROOM = '', ROOM_NAME = '';
+try { ROOM = normRoom(localStorage.getItem('so_room')); ROOM_NAME = localStorage.getItem('so_room_name') || ''; } catch (_) {}
+const RS = ROOM ? '_' + ROOM : '';   // akhiran untuk kunci localStorage
+
+const DB_NAME = 'stok-opname' + (ROOM ? '-' + ROOM : ''), STORE = 'records', META = 'meta';
+const gasGet = a => `${GAS_URL}?action=${a}&room=${encodeURIComponent(ROOM)}`;
 let db;
 const $ = id => document.getElementById(id);
 const configured = () => /^https:\/\/script\.google\.com\/.+\/exec/.test(GAS_URL);
@@ -742,7 +775,7 @@ async function uploadMasterToServer(m) {
     const res = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'uploadMaster', key: adminKey, fileName: m.fileName, rows: m.rows })
+      body: JSON.stringify({ room: ROOM, action: 'uploadMaster', key: adminKey, fileName: m.fileName, rows: m.rows })
     });
     const j = await res.json();
     if (j.ok) return j;
@@ -762,10 +795,10 @@ async function syncMaster(force) {
   }
   if (!force && master && master.pendingShare) return; // jangan timpa master lokal yang belum terbagikan
   try {
-    const info = await (await fetch(GAS_URL + '?action=masterinfo')).json();
+    const info = await (await fetch(gasGet('masterinfo'))).json();
     if (!info.ok || !info.version) { if (force) toast('Belum ada master di server.', true); return; }
     if (!force && master && master.version === info.version) return;
-    const full = await (await fetch(GAS_URL + '?action=master')).json();
+    const full = await (await fetch(gasGet('master'))).json();
     if (!full.ok || !Array.isArray(full.rows)) throw new Error('respons tidak valid');
     const m = { id: 'master', fileName: full.fileName || 'master', loadedAt: new Date().toISOString(), version: full.version, rows: full.rows };
     await putMaster(m);
@@ -815,6 +848,7 @@ function validate() {
   }
   ksuHint(r);
   renderUnitInfo(r.row);
+  luarBoxUpdate(r);
   return r;
 }
 /* Saran otomatis: ketik minimal 3 karakter (mis. 4 angka terakhir), pilih dari daftar */
@@ -930,10 +964,12 @@ async function kirim(rec) {
     unit: rec.unit, jumlah: rec.jumlah, kondisi: rec.kondisi,
     kecocokan: rec.kecocokan, foto: rec.fotoNama,
     statusOpname: rec.statusOpname || '', ksu: rec.ksu || null,
+    perluCek: rec.perluCek ? 'Ya' : '', catatanCek: rec.catatanCek || '',
     fotoWaktu: rec.fotoWaktu || '',
     koordinat: rec.lat != null ? `${rec.lat.toFixed(6)}, ${rec.lng.toFixed(6)}` : '',
     mapsUrl: rec.mapsUrl || '',
-    ticket: rec.ticket || (session && session.ticket) || ''
+    ticket: rec.ticket || (session && session.ticket) || '',
+    room: ROOM
   };
   const res = await fetch(GAS_URL, {
     method: 'POST',
@@ -977,8 +1013,10 @@ $('form').addEventListener('submit', async e => {
   if (!file && statusOp !== 'TIDAK ADA') return toast('Foto unit wajib diisi.', true);
 
   const v = validate();
-  if (v.s === 'Tidak Cocok' || v.s === 'Tidak Terdaftar') {
-    if (!confirm(`${v.msg}\n\nTetap simpan dengan status "${v.s}"?`)) return;
+  const luar = v.s === 'Tidak Cocok' || v.s === 'Tidak Terdaftar';
+  if (luar && !$('luarChk').checked) {
+    $('luarBox').scrollIntoView({ block: 'center' });
+    return toast('Nomor tidak ada di data. Centang "Tidak ada di data, perlu dicek ulang" untuk tetap menyimpan.', true);
   }
 
   const btn = $('simpan');
@@ -1014,6 +1052,8 @@ $('form').addEventListener('submit', async e => {
       jumlah: 1, // satu nomor mesin/rangka = satu unit
       kondisi: document.querySelector('input[name=kondisi]:checked').value,
       kecocokan: v.s,
+      perluCek: luar,
+      catatanCek: luar ? $('luarNote').value.trim() : '',
       statusOpname: statusOp,
       ksu: readKsu(),
       fotoNama: file ? file.name : '',
@@ -1049,6 +1089,7 @@ $('form').addEventListener('submit', async e => {
     document.querySelector('input[name=kondisi][value=Bagus]').checked = true;
     document.querySelector('input[name=statusOp][value="ADA / SESUAI"]').checked = true;
     document.querySelectorAll('input[name=ksu]').forEach(c => { c.checked = false; });
+    $('luarChk').checked = false; $('luarNote').value = '';
     applyStatus();
     validate();
     suggest('e'); suggest('c');
@@ -1153,6 +1194,7 @@ async function render() {
     }
     info.append(t, m1, m2, m3);
     if (r.kecocokan) info.append(mkBadge(r.kecocokan, badgeCls(r.kecocokan)));
+    if (r.perluCek) info.append(mkBadge('Perlu cek ulang', 'bad'));
     if (r.statusOpname) info.append(mkBadge(r.statusOpname, r.statusOpname === 'ADA / SESUAI' ? 'ok' : r.statusOpname === 'BEDA LOKASI' ? 'pending' : 'bad'));
     const synced = r.status === 'synced';
     info.append(mkBadge(synced ? 'Terkirim' : 'Tertunda', synced ? 'synced' : 'pending'));
@@ -1193,7 +1235,7 @@ async function callGas(payload) {
   const res = await fetch(GAS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ room: ROOM, ...payload })
   });
   return res.json();
 }
@@ -1225,14 +1267,17 @@ function resetLoginMode() {
 
 function showSesi() {
   const ok = !!session;
-  $('loginForm').hidden = ok;
+  $('roomSec').hidden = !!ROOM;
+  $('loginForm').hidden = ok || !ROOM;
+  $('roomTag').textContent = ROOM ? `Room: ${ROOM}${ROOM_NAME && ROOM_NAME !== ROOM ? ' (' + ROOM_NAME + ')' : ''}` : '';
+  $('loginRoom').textContent = ROOM ? (ROOM_NAME && ROOM_NAME !== ROOM ? `${ROOM} (${ROOM_NAME})` : ROOM) : '-';
   $('sesiView').hidden = !ok;
   applyTab();
   $('sesiText').textContent = ok ? `${session.nama}, cabang ${session.cabang}` : '';
   if (ok) { $('petugas').value = session.nama; $('cabang').value = session.cabang; }
 }
 function startSession(nama, cabang, ticket) {
-  session = { nama, cabang, ticket: ticket || '' };
+  session = { nama, cabang, ticket: ticket || '', room: ROOM };
   try {
     sessionStorage.setItem('so_session', JSON.stringify(session)); // hilang saat tab/browser ditutup
     localStorage.setItem('so_user', JSON.stringify({ p: nama, c: cabang })); // hanya untuk mengisi nama berikutnya
@@ -1380,7 +1425,7 @@ function applyStatus() {
 document.querySelectorAll('input[name=statusOp]').forEach(r => r.addEventListener('change', applyStatus));
 
 /* ---------- Tab, progres, dan Unit Belum Opname ---------- */
-let tab = 'opname', doneServer = [], belumCache = null;
+let tab = 'opname', doneServer = [], belumCache = null, belumMode = 'belum';
 
 function applyTab() {
   const ok = !!session;
@@ -1402,7 +1447,7 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 async function syncDone() {
   if (!navigator.onLine || !configured()) return;
   try {
-    const j = await (await fetch(GAS_URL + '?action=opnamelist')).json();
+    const j = await (await fetch(gasGet('opnamelist'))).json();
     if (j.ok && Array.isArray(j.rows)) {
       doneServer = j.rows;
       await run(META, 'readwrite', s => s.put({ id: 'done', rows: j.rows, at: new Date().toISOString() }));
@@ -1417,7 +1462,8 @@ async function computeProgress() {
   const dE = new Map(), dC = new Map();
   const add = (e, c, info) => { const ne = norm(e), nc = norm(c); if (ne) dE.set(ne, info); if (nc) dC.set(nc, info); };
   doneServer.forEach(x => add(x.e, x.c, { status: x.s || 'Sudah diopname', petugas: x.p, waktu: x.t }));
-  (await allRecs()).forEach(r => add(r.engineNo, r.chasisNo, { status: r.statusOpname || 'Sudah diopname', petugas: r.petugas, waktu: r.dibuat }));
+  const recs = await allRecs();
+  recs.forEach(r => add(r.engineNo, r.chasisNo, { status: r.statusOpname || 'Sudah diopname', petugas: r.petugas, waktu: r.dibuat }));
   const rows = unitList;
   const belum = [];
   let sudah = 0;
@@ -1425,8 +1471,26 @@ async function computeProgress() {
     const ne = norm(r.e), nc = norm(r.c);
     if ((ne && dE.has(ne)) || (nc && dC.has(nc))) sudah++; else belum.push(r);
   }
-  return { total: rows.length, sudah, belum, dE, dC };
+  return { total: rows.length, sudah, belum, dE, dC, cek: flaggedFrom(recs) };
 }
+
+// Unit yang catatan terakhirnya ditandai "perlu cek ulang" (hasil terbaru per nomor yang menentukan)
+function flaggedFrom(recs) {
+  const ev = [];
+  doneServer.forEach(x => ev.push({ e: x.e, c: x.c, t: x.t || '', x: x.x === 'Ya', n: x.n || '', p: x.p || '' }));
+  recs.forEach(r => ev.push({ e: r.engineNo, c: r.chasisNo, t: r.dibuat || '', x: !!r.perluCek, n: r.catatanCek || '', p: r.petugas || '' }));
+  ev.sort((a, b) => String(a.t).localeCompare(String(b.t)));
+  const last = new Map();
+  for (const v of ev) { const k = norm(v.e) || norm(v.c); if (k) last.set(k, v); }
+  return [...last.values()].filter(v => v.x).sort((a, b) => String(b.t).localeCompare(String(a.t)));
+}
+// Kotak "Tidak ada di data": muncul saat nomor tidak terdaftar / tidak cocok dengan data yang diunggah
+function luarBoxUpdate(r) {
+  const need = !!master && (r.s === 'Tidak Cocok' || r.s === 'Tidak Terdaftar');
+  $('luarBox').hidden = !need;
+  if (!need) $('luarChk').checked = false;
+}
+
 // Info opname untuk satu unit (null jika belum diopname). Dipakai untuk menandai hasil pencarian.
 function sudahOpname(row) {
   const b = belumCache;
@@ -1466,6 +1530,7 @@ async function refreshProgress(redraw = true) {
     $('progres').textContent = b.total
       ? `Total ${n(b.total)} unit. Sudah opname ${n(b.sudah)} (${Math.round(b.sudah * 100 / b.total)}%), belum ${n(b.belum.length)}.`
       : '';
+    $('cekN').textContent = b.cek.length ? `(${b.cek.length})` : '';
     renderUnitInfo(cur && cur.row);
     if (redraw && session && tab === 'belum') renderBelum(false);
   } catch (_) {}
@@ -1475,6 +1540,8 @@ async function renderBelum(fresh) {
   if (fresh || !belumCache) await refreshProgress(false);
   const b = belumCache;
   if (!b) return;
+  $('belumWh').hidden = belumMode === 'cek';
+  if (belumMode === 'cek') return renderCek(b);
   const whSel = $('belumWh'), q = $('belumQ').value.trim().toLowerCase();
   const whOf = r => (r.w || '').trim() || '-';
   const whName = w => w === '-' ? 'Warehouse tidak tercantum' : w;
@@ -1516,6 +1583,30 @@ async function renderBelum(fresh) {
   }
   if (list.length > MAX) note(`Menampilkan ${MAX} pertama. Gunakan filter atau pencarian untuk mempersempit.`);
 }
+function renderCek(b) {
+  const q = $('belumQ').value.trim().toLowerCase();
+  const list = b.cek.filter(v => !q || `${v.e} ${v.c} ${v.n}`.toLowerCase().includes(q));
+  $('belumStat').textContent = `${list.length.toLocaleString('id-ID')} unit perlu dicek ulang`;
+  const box = $('belumList');
+  box.textContent = '';
+  if (!list.length) { box.append(mk('p', 'empty', b.cek.length ? 'Tidak ada unit yang cocok dengan pencarian.' : 'Tidak ada unit yang perlu dicek ulang.')); return; }
+  for (const v of list.slice(0, 150)) {
+    const row = mk('div', 'bitem'), info = mk('div');
+    info.append(mk('div', 't mono', v.e || '-'), mk('div', 'm mono', v.c || '-'));
+    if (v.n) info.append(mk('div', 'm', `Catatan: ${v.n}`));
+    info.append(mk('div', 'm', [v.p ? `oleh ${v.p}` : '', fmtWaktu(v.t)].filter(Boolean).join(', ')));
+    if (byE.get(norm(v.e)) || byC.get(norm(v.c))) info.append(mkBadge('Sekarang ada di data', 'synced'));
+    const btn = mk('button', 'ghost', 'Periksa ulang'); btn.type = 'button';
+    btn.addEventListener('click', () => periksa({ e: v.e, c: v.c }));
+    row.append(info, btn);
+    box.append(row);
+  }
+}
+document.querySelectorAll('#belumMode button').forEach(bt => bt.addEventListener('click', () => {
+  belumMode = bt.dataset.mode;
+  document.querySelectorAll('#belumMode button').forEach(x => x.setAttribute('aria-selected', String(x === bt)));
+  renderBelum(false);
+}));
 function periksa(r) {
   $('engine').value = (r.e || '').toUpperCase();
   $('chasis').value = (r.c || '').toUpperCase();
@@ -1539,8 +1630,8 @@ const KAT = [
   { key: 'SafetyRiding', title: 'SAFETY RIDING', short: 'SAFETY RIDING' }
 ];
 const rupiah = v => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
-const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (_) { return {}; } };
-const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k + RS) || '{}'); } catch (_) { return {}; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k + RS, JSON.stringify(v)); } catch (_) {} };
 const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const gudangAll = () => run('gudang', 'readonly', s => s.getAll());
 const gudangPut = g => run('gudang', 'readwrite', s => s.put(g));
@@ -1561,11 +1652,11 @@ async function hasilMap() {
     if (!x.s) continue;
     const ksu = {};
     KSU_URUT.forEach((n, i) => { ksu[n] = (x.k || '')[i] === '1'; });
-    put(x.e, x.c, { e: x.e, c: x.c, ksu, status: x.s, petugas: x.p, kondisi: x.d, waktu: x.t });
+    put(x.e, x.c, { e: x.e, c: x.c, ksu, status: x.s, petugas: x.p, kondisi: x.d, waktu: x.t, perluCek: x.x === 'Ya', catatan: x.n });
   }
   (await allRecs()).filter(r => r.statusOpname).forEach(r => put(r.engineNo, r.chasisNo, {
     e: r.engineNo, c: r.chasisNo, ksu: r.ksu || {}, status: r.statusOpname, petugas: r.petugas,
-    kondisi: r.kondisi, waktu: r.dibuat, foto: !!r.foto
+    kondisi: r.kondisi, waktu: r.dibuat, foto: !!r.foto, perluCek: !!r.perluCek, catatan: r.catatanCek
   }));
   return [hE, hC];
 }
@@ -1838,7 +1929,7 @@ document.querySelectorAll('#subTabs button').forEach(b => b.addEventListener('cl
 
 const fmtTgl = v => { if (!v) return '-'; const [y, m, d] = v.split('-'); return `${d}/${m}/${y}`; };
 function ksuHeader() {
-  try { return { cabang: localStorage.getItem('ksu_cabang') || '', mulai: localStorage.getItem('ksu_tgl_mulai') || '', selesai: localStorage.getItem('ksu_tgl_selesai') || '' }; }
+  try { return { cabang: localStorage.getItem('ksu_cabang' + RS) || '', mulai: localStorage.getItem('ksu_tgl_mulai' + RS) || '', selesai: localStorage.getItem('ksu_tgl_selesai' + RS) || '' }; }
   catch (_) { return { cabang: '', mulai: '', selesai: '' }; }
 }
 function fillHeader() {
@@ -1876,7 +1967,7 @@ $('mOk').addEventListener('click', () => {
   if (!cabang) return err('Pilih nama cabang terlebih dahulu.');
   if (!a || !b) return err('Isi tanggal mulai dan tanggal selesai audit.');
   if (a > b) return err('Tanggal mulai audit tidak boleh setelah tanggal selesai.');
-  try { localStorage.setItem('ksu_cabang', cabang); localStorage.setItem('ksu_tgl_mulai', a); localStorage.setItem('ksu_tgl_selesai', b); } catch (_) {}
+  try { localStorage.setItem('ksu_cabang' + RS, cabang); localStorage.setItem('ksu_tgl_mulai' + RS, a); localStorage.setItem('ksu_tgl_selesai' + RS, b); } catch (_) {}
   fillHeader();
   tutupModal();
   if (aksiLaporan === 'excel') return jalankanExcel('all');
@@ -1921,7 +2012,7 @@ async function syncGudang() {
   await pushGudang();
   if (!navigator.onLine || !configured()) return;
   try {
-    const j = await (await fetch(GAS_URL + '?action=gudanglist')).json();
+    const j = await (await fetch(gasGet('gudanglist'))).json();
     if (j.ok && Array.isArray(j.rows)) {
       gudangServer = j.rows;
       await run(META, 'readwrite', s => s.put({ id: 'gudangServer', rows: j.rows }));
@@ -2146,10 +2237,10 @@ async function uploadWhToServer(slot, data) {
 async function syncWh(force) {
   if (!navigator.onLine || !configured()) { if (force) toast('Perlu online dan GAS_URL terisi.', true); return; }
   try {
-    const info = await (await fetch(GAS_URL + '?action=whinfo')).json();
+    const info = await (await fetch(gasGet('whinfo'))).json();
     if (!info.ok) return;
     if (!force && info.version === wh.version) return;
-    const full = await (await fetch(GAS_URL + '?action=wh')).json();
+    const full = await (await fetch(gasGet('wh'))).json();
     if (!full.ok || !full.slots) throw new Error('respons tidak valid');
     const next = {};
     for (const k of Object.keys(wh.slots)) if (wh.slots[k].pending) next[k] = wh.slots[k]; // yang belum terbagikan tidak ditimpa
@@ -2253,7 +2344,8 @@ async function unduhHasilUnit() {
       'No. Mesin': h.e || '-', 'No. Rangka': h.c || '-', 'Status Opname': h.status || '-',
       'Spion': tick(k.spion), 'Aki': tick(k.aki), 'Tool Kit': tick(k.toolkit), 'Plat Holder': tick(k.plat_holder),
       'Helm': tick(k.helm), 'Safety Riding': tick(k.safety_riding),
-      'Kondisi': h.kondisi || '-', 'Petugas': h.petugas || '-', 'Waktu Opname': waktu(h.waktu)
+      'Kondisi': h.kondisi || '-', 'Petugas': h.petugas || '-', 'Waktu Opname': waktu(h.waktu),
+      'Perlu Cek Ulang': h.perluCek ? 'Ya' : '-', 'Catatan': h.catatan || '-'
     };
   });
   if (luar.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(luar), 'Tidak Terdaftar');
@@ -2267,6 +2359,52 @@ $('exportHasil').addEventListener('click', async () => {
   finally { b.disabled = false; }
 });
 
+/* ---------- Room ---------- */
+const roomOkList = () => { try { return JSON.parse(localStorage.getItem('so_rooms_ok') || '{}'); } catch (_) { return {}; } };
+function roomMsg(t) { const el = $('roomMsg'); el.hidden = !t; el.textContent = t || ''; }
+function masukRoom(code, nama) {
+  try {
+    localStorage.setItem('so_room', code);
+    localStorage.setItem('so_room_last', code);
+    localStorage.setItem('so_room_name', nama || '');
+    sessionStorage.removeItem('so_session');
+  } catch (_) {}
+  location.reload(); // mulai bersih: database, master, dan sesi milik room yang dipilih
+}
+$('roomForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const code = normRoom($('roomCode').value);
+  if (code.length < 3) return roomMsg('Kode room minimal 3 karakter (huruf, angka, tanda - atau _).');
+  const btn = $('roomOk');
+  btn.disabled = true;
+  roomMsg('');
+  try {
+    if (!configured()) return masukRoom(code, ''); // mode lokal tanpa server
+    const known = roomOkList();
+    if (navigator.onLine) {
+      try {
+        const j = await (await fetch(`${GAS_URL}?action=room&code=${encodeURIComponent(code)}`)).json();
+        if (!j.ok) return roomMsg(j.error || 'Room tidak ditemukan.');
+        known[code] = j.nama || '';
+        try { localStorage.setItem('so_rooms_ok', JSON.stringify(known)); } catch (_) {}
+        return masukRoom(code, j.nama || '');
+      } catch (_) { /* jaringan gagal: pakai daftar room yang pernah diverifikasi */ }
+    }
+    if (code in known) return masukRoom(code, known[code]);
+    roomMsg('Room ini belum pernah diverifikasi di perangkat ini. Sambungkan internet untuk pertama kali.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+$('roomGanti').addEventListener('click', () => {
+  try {
+    localStorage.removeItem('so_room');
+    localStorage.removeItem('so_room_name');
+    sessionStorage.removeItem('so_session');
+  } catch (_) {}
+  location.reload();
+});
+
 /* ---------- Mulai ---------- */
 (async function init() {
   $('cfgWarn').hidden = configured();
@@ -2276,9 +2414,14 @@ $('exportHasil').addEventListener('click', async () => {
   } catch (_) {}
   try {
     const s = JSON.parse(sessionStorage.getItem('so_session') || 'null');
-    if (s && s.nama && s.cabang) session = s;
+    if (s && s.nama && s.cabang && s.room === ROOM) session = s;
   } catch (_) {}
   showSesi();
+  if (!ROOM) { // belum memilih room: database belum dibuka
+    try { $('roomCode').value = localStorage.getItem('so_room_last') || ''; } catch (_) {}
+    updateNet();
+    return;
+  }
   try {
     db = await openDB();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
