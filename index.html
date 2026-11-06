@@ -169,6 +169,13 @@
   .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
   .modal-card{background:#fff;border-radius:12px;padding:18px;width:min(460px,100%);max-height:100%;overflow:auto}
   .modal-card h3{font-size:1.1rem}
+  .unit-info{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+  .ui-box{border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;background:#fff;font-size:14px}
+  .ui-box h4{margin:0 0 4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .ui-box div+div{margin-top:2px}
+  .ui-box.done{border-color:#7cc3b2;background:#d9f1ea;color:#0a5246}
+  .ui-box.done h4{color:#0a5246}
+  .sug button.done{border-left:4px solid var(--ok);background:#f2faf7}
   .empty{color:var(--muted);margin:4px 0}
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,480px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   #toast.show{opacity:1}
@@ -283,6 +290,7 @@
       <ul id="sugC" class="sug" hidden></ul>
 
       <div id="val" class="val" role="status" aria-live="polite">Isi Engine No atau Chasis No untuk validasi.</div>
+      <div id="unitInfo" class="unit-info" hidden></div>
 
       <div class="row">
         <div><label for="typeUnit">Type unit</label><input id="typeUnit" type="text"></div>
@@ -806,6 +814,7 @@ function validate() {
     else if (el.dataset.auto) { el.value = ''; delete el.dataset.auto; }
   }
   ksuHint(r);
+  renderUnitInfo(r.row);
   return r;
 }
 /* Saran otomatis: ketik minimal 3 karakter (mis. 4 angka terakhir), pilih dari daftar */
@@ -831,8 +840,15 @@ function suggest(field) {
     const li = document.createElement('li'), b = document.createElement('button');
     b.type = 'button';
     const s1 = document.createElement('div'); s1.className = 's1 mono'; s1.textContent = `${r.e || '-'} / ${r.c || '-'}`;
-    const s2 = document.createElement('div'); s2.className = 's2'; s2.textContent = [r.t, r.w].filter(Boolean).join(', ');
+    const s2 = document.createElement('div'); s2.className = 's2'; s2.textContent = [r.t, r.fw ?? r.w].filter(Boolean).join(', ');
     b.append(s1, s2);
+    Object.keys(r.wt || {}).sort().forEach(k => b.append(mk('div', 's2', `Warehouse ${k}: ${r.wt[k]}`)));
+    const dn = sudahOpname(r);
+    if (dn) {
+      b.classList.add('done');
+      s1.append(' ', mk('span', 'badge synced', '\u2713 Sudah opname'));
+      b.append(mk('div', 's2', `${dn.status}${dn.petugas ? ' oleh ' + dn.petugas : ''}`));
+    }
     b.addEventListener('click', () => pick(r));
     li.append(b);
     list.append(li);
@@ -1398,10 +1414,10 @@ async function syncDone() {
 
 // Unit master dianggap sudah opname jika Engine/Chasis-nya ada di hasil perangkat ini atau di server
 async function computeProgress() {
-  const dE = new Set(), dC = new Set();
-  const add = (e, c) => { const ne = norm(e), nc = norm(c); if (ne) dE.add(ne); if (nc) dC.add(nc); };
-  (await allRecs()).forEach(r => add(r.engineNo, r.chasisNo));
-  doneServer.forEach(x => add(x.e, x.c));
+  const dE = new Map(), dC = new Map();
+  const add = (e, c, info) => { const ne = norm(e), nc = norm(c); if (ne) dE.set(ne, info); if (nc) dC.set(nc, info); };
+  doneServer.forEach(x => add(x.e, x.c, { status: x.s || 'Sudah diopname', petugas: x.p, waktu: x.t }));
+  (await allRecs()).forEach(r => add(r.engineNo, r.chasisNo, { status: r.statusOpname || 'Sudah diopname', petugas: r.petugas, waktu: r.dibuat }));
   const rows = unitList;
   const belum = [];
   let sudah = 0;
@@ -1409,7 +1425,39 @@ async function computeProgress() {
     const ne = norm(r.e), nc = norm(r.c);
     if ((ne && dE.has(ne)) || (nc && dC.has(nc))) sudah++; else belum.push(r);
   }
-  return { total: rows.length, sudah, belum };
+  return { total: rows.length, sudah, belum, dE, dC };
+}
+// Info opname untuk satu unit (null jika belum diopname). Dipakai untuk menandai hasil pencarian.
+function sudahOpname(row) {
+  const b = belumCache;
+  if (!b || !row) return null;
+  return b.dE.get(norm(row.e)) || b.dC.get(norm(row.c)) || null;
+}
+const fmtWaktu = w => { const d = w ? new Date(w) : null; return d && !isNaN(d) ? d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : ''; };
+
+// Lokasi tambahan (file ke-2 sampai ke-6) dan tanda "sudah opname" untuk unit yang cocok
+function renderUnitInfo(row) {
+  const box = $('unitInfo');
+  box.textContent = '';
+  if (!row) { box.hidden = true; return; }
+  const ks = Object.keys(row.wt || {}).sort();
+  if (ks.length || row.sumber) {
+    const b = mk('div', 'ui-box');
+    b.append(mk('h4', '', 'Lokasi tambahan'));
+    if (row.w) b.append(mk('div', '', `Warehouse utama: ${row.sumber ? '-' : row.w}`));
+    ks.forEach(k => b.append(mk('div', '', `Warehouse ${k}: ${row.wt[k]}`)));
+    box.append(b);
+  }
+  const d = sudahOpname(row);
+  if (d) {
+    const b = mk('div', 'ui-box done');
+    b.append(mk('h4', '', '\u2713 Sudah diopname'));
+    b.append(mk('div', '', `Status: ${d.status}`));
+    const by = [d.petugas ? `oleh ${d.petugas}` : '', fmtWaktu(d.waktu)].filter(Boolean).join(', ');
+    if (by) b.append(mk('div', '', by));
+    box.append(b);
+  }
+  box.hidden = !box.childNodes.length;
 }
 async function refreshProgress(redraw = true) {
   try {
@@ -1418,6 +1466,7 @@ async function refreshProgress(redraw = true) {
     $('progres').textContent = b.total
       ? `Total ${n(b.total)} unit. Sudah opname ${n(b.sudah)} (${Math.round(b.sudah * 100 / b.total)}%), belum ${n(b.belum.length)}.`
       : '';
+    renderUnitInfo(cur && cur.row);
     if (redraw && session && tab === 'belum') renderBelum(false);
   } catch (_) {}
 }
