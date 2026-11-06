@@ -91,26 +91,84 @@
   .grp:first-child{margin-top:0}
   .bitem{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
   .bitem button{flex:none;min-height:40px;font-size:14px}
-  details{margin-bottom:12px}
-  summary{font-weight:650;cursor:pointer;min-height:44px;display:flex;align-items:center}
-  .cardx{border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px;background:#fff}
-  .cardx .bar2{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--ink);color:#fff;font-weight:650;font-size:14px}
-  .twrap{overflow-x:auto}
-  table.rk{width:100%;border-collapse:collapse;font-size:14px}
-  .rk th,.rk td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center}
-  .rk th{background:#f1f2ee;font-size:12px}
-  .rk td:nth-child(2),.rk th:nth-child(2){text-align:left}
-  .rk tr.minus td{background:#fbd5d1;color:#8a1b14;font-weight:600}
-  .rk tr.plus td{background:#cfeee6;color:#0a5246;font-weight:600}
-  .rk tr.cat td{background:#e3e5e0;font-weight:650;text-align:left}
-  .rk tr.tot td{background:#f1f2ee;font-weight:700}
-  .rk input{width:100%;min-width:90px;min-height:38px;padding:4px 8px;font:inherit;border:1.5px solid var(--line);border-radius:6px;text-align:right}
-  .kes{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff;font-size:14px}
-  .kes .kh{display:flex;justify-content:space-between;gap:8px;font-weight:650;margin-bottom:4px}
-  .kes.sum{background:#f1f2ee}
-  .neg{color:var(--bad);font-weight:700}
-  .pos{color:var(--ok);font-weight:700}
-  .printonly{display:none}
+  main.wide{max-width:1000px}
+  /* ===== Tampilan laporan (mengikuti stok_unit.html) ===== */
+  .rp-head{display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+  .rp-title{margin:0;font-size:1.05rem;font-weight:800;color:#1e293b}
+  .rp-sub{margin:2px 0 0;font-size:12px;color:#64748b}
+  .rp-btns{display:flex;flex-wrap:wrap;gap:8px}
+  .rp-btns button{min-height:40px;font-size:13px;padding:0 14px;border:0;color:#fff}
+  .b-emerald{background:#059669}.b-emerald2{background:#047857}.b-indigo{background:#4f46e5}
+  .rp-section{border-bottom:1px solid var(--line);padding-bottom:8px;margin:14px 0 12px}
+  .rp-section h3{margin:0;font-size:1.05rem;font-weight:800;color:#1e293b}
+  .rp-section p{margin:2px 0 0;font-size:12px;color:#64748b}
+  .rp-section .rp-info{color:var(--muted)}
+  .rp-fh{margin:0 0 10px;font-size:1rem;color:#1e293b}
+  .laporan-header{background:linear-gradient(180deg,#fff 0%,#f6f4f4 100%);border:1px solid #000205;border-radius:6px;padding:10px 12px 12px;margin-bottom:8px}
+  .lh-cabang{text-align:center;font-weight:700;margin:6px 0 0}
+  .laporan-date-row{display:flex;flex-direction:row;gap:16px;width:100%;max-width:900px;margin:8px auto 0}
+  .laporan-date-field{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+  .laporan-date-field p{margin:0;font-weight:700}
+  .laporan-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#000102;text-align:center}
+  .report-print-info,.print-title-only,.signoff-print-only,.minus-report-print-only,.minus-signoff-print-only{display:none}
+  .print-title-only{border-bottom:2px solid #1e293b;padding-bottom:4px}
+  .print-title-only h1,.minus-report-print-only h1{margin:0;font-size:1.25rem;font-weight:800;letter-spacing:.05em;text-align:center;color:#0f172a}
+  .minus-report-print-only{border-bottom:2px solid #1e293b;padding-bottom:8px;margin-bottom:8px;text-align:center}
+  .minus-report-print-only h2{margin:4px 0 0;font-size:.875rem;font-weight:700;color:#1e293b}
+  .official-table-card{border:1px solid #b8c2d1;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.04);margin-bottom:8px}
+  .official-table-header-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:linear-gradient(180deg,#1d3150 0%,#243d5c 100%);color:#fff;padding:8px 12px;font-weight:800;font-size:.76rem;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid #cbd5e1}
+  .official-table-wrap{overflow-x:auto}
+  .official-table{width:100%;min-width:640px;border-collapse:collapse;table-layout:fixed;font-size:.7rem;color:#0f172a}
+  .official-table th,.official-table td{border:1px solid #64748b;padding:6px 5px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .official-table thead th{background:#eef0f1;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.03em;text-align:center;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}
+  .official-table td{text-align:center;font-weight:500}
+  .official-table td.l{text-align:left}
+  .official-table td.r{text-align:right;font-weight:700}
+  .official-table tr.minus td{background:#fecaca;color:#7f1d1d}
+  .official-table tr.plus td{background:#bbf7d0;color:#14532d}
+  .official-table tr.sesuai td{background:#fff}
+  .official-table td.b{font-weight:700}
+  .official-table tr.table-total-row td{background:#f3f4f6;font-weight:800;color:#111827;border-top:2px solid #94a3b8}
+  .official-table input{width:100%;min-height:34px;padding:4px 8px;font:inherit;color:#1e293b;background:#fff;border:1px solid #cbd5e1;border-radius:4px;text-align:right}
+  .official-table input[type=text]{text-align:left}
+  .minus-field-print{display:none}
+  .minus-total{text-align:right;font-weight:800;color:#0f172a;border-top:2px solid #64748b;padding-top:8px;margin-top:8px;font-size:1rem}
+  .kes-grid{display:grid;grid-template-columns:1fr;gap:12px}
+  .kesimpulan-card{border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.05);padding:12px 14px}
+  .kesimpulan-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #e2e8f0}
+  .kesimpulan-title{font-size:.8rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.04em}
+  .kesimpulan-badge{font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .kesimpulan-badge.minus{background:#fee2e2;color:#d51a1a}
+  .kesimpulan-badge.plus{background:#dcfce7;color:#166534}
+  .kesimpulan-badge.sesuai{background:#f1f5f9;color:#475569}
+  .kesimpulan-text{margin:0;font-size:.82rem;line-height:1.6;color:#334155}
+  .kesimpulan-text b{color:#0f172a}
+  .kesimpulan-text .neg,.kes-total .neg{color:#d51a1a;font-weight:700}
+  .kesimpulan-text .pos,.kes-total .pos{color:#15803d;font-weight:700}
+  .kes-total{display:flex;flex-direction:column;gap:8px;border:2px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:12px;box-shadow:0 1px 3px rgba(15,23,42,.06);background:#f8fafc}
+  .kes-total.minus{border-color:#fca5a5;background:#fef2f2}
+  .kes-total.plus{border-color:#86efac;background:#f0fdf4}
+  .kes-total .kl{font-size:.75rem;color:#475569}
+  .kes-total .kl p{margin:0 0 4px}
+  .kes-total .kr{font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em}
+  .kes-total .kr p{margin:0}
+  .kesimpulan-grand-value{font-size:1.05rem;font-weight:800;white-space:nowrap}
+  .kesimpulan-grand-value.minus{color:#d51a1a}
+  .kesimpulan-grand-value.plus{color:#15803d}
+  .kesimpulan-grand-value.sesuai{color:#475569}
+  @media (min-width:640px){.kes-total{flex-direction:row;justify-content:space-between;align-items:center}.kes-total .kr{text-align:right}.rp-head{flex-direction:row;justify-content:space-between;align-items:center}}
+  @media (min-width:900px){.kes-grid{grid-template-columns:1fr 1fr}}
+  .official-signoff{display:flex;flex-direction:column;justify-content:space-between;min-height:150px;border:1px solid #cbd5e1;border-radius:8px;background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);padding:10px 14px 12px;text-align:center}
+  .official-signoff .role{font-size:.72rem;color:#64748b;margin:2px 0 0;line-height:1.4}
+  .official-signoff .line{border-bottom:2px solid #2f2f2f;margin:14px 18px 6px;min-height:24px}
+  .official-signoff .person{font-size:.72rem;font-weight:700;color:#334155;text-transform:uppercase;margin:0;letter-spacing:.03em}
+  .signoff-4-col{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 auto;width:100%}
+  .signoff-2-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:700px;width:100%;margin:0 auto}
+  .so-wrap{display:flex;flex-direction:column;gap:24px;text-align:center;font-size:.75rem}
+  .so-head{margin:0;font-size:.875rem;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.025em}
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal-card{background:#fff;border-radius:12px;padding:18px;width:min(460px,100%);max-height:100%;overflow:auto}
+  .modal-card h3{font-size:1.1rem}
   .empty{color:var(--muted);margin:4px 0}
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,480px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
   #toast.show{opacity:1}
@@ -120,13 +178,39 @@
   #scanner p{margin:0;padding:10px 16px;color:#fff;font-size:14px;text-align:center;background:#000}
   #scanner button{margin:0 16px calc(16px + env(safe-area-inset-bottom,0px))}
   @media print{
-    body{background:#fff}
-    .bar,.tabs,.noprint,#toast,#scanner{display:none!important}
+    @page{size:A4 portrait;margin:4mm 5mm}
+    @page minus-landscape{size:A4 landscape;margin:4mm 5mm}
+    body.print-minus-ksu{page:minus-landscape}
+    body{background:#fff!important;color:#000!important;font-family:Arial,sans-serif!important;padding:0!important;margin:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    .bar,.tabs,.no-print,.notice,#toast,#scanner,#modalLaporan{display:none!important}
+    main,main.wide{max-width:none!important;width:100%!important;margin:0!important;padding:0!important}
     main>section:not(#rekapSec){display:none!important}
-    #rekapSec{border:0;padding:0;margin:0;background:#fff}
-    .printonly{display:block!important}
-    .rk input{border:0;padding:0;min-width:0}
-    .cardx{break-inside:avoid}
+    #rekapSec{display:block!important;padding:0!important;margin:0!important;border:none!important;background:#fff!important}
+    .print-title-only{display:block!important;margin-bottom:0}
+    .report-print-info{display:block!important}
+    #sec-barang-minus,#subMinus{margin:0}
+    .signoff-print-only{display:block!important;margin-top:2px!important;padding-top:4px!important;border-top:1px solid #94a3b8}
+    body.print-minus-ksu .minus-report-print-only,body.print-minus-ksu .minus-signoff-print-only{display:block!important}
+    body.print-minus-ksu .minus-field-screen{display:none!important}
+    body.print-minus-ksu .minus-field-print{display:inline!important}
+    body.print-minus-ksu .minus-total{margin-top:2px!important;padding-top:2px!important;padding-bottom:2px!important}
+    body.print-minus-ksu #minusSignoff{margin-top:2px!important}
+    .laporan-header,.official-table-card,.official-signoff{box-shadow:none!important}
+    .official-table-card{margin-bottom:3px!important;border-radius:0}
+    .official-table-wrap{overflow:visible!important}
+    .official-table{min-width:0!important;font-size:.52rem!important}
+    .official-table th,.official-table td{padding:2px 3px!important;border:1px solid #333!important;font-size:8px!important}
+    .official-table thead th{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;line-height:1.15!important;background:#eef0f1!important}
+    .signoff-4-col{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:3mm!important}
+    .signoff-2-col{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3mm!important}
+    .official-signoff{min-height:110px!important;padding:4px 6px!important}
+    .official-signoff .role,.official-signoff .person{font-size:.5rem!important}
+    .official-signoff .line{margin:4px 8px 2px!important;min-height:6px!important}
+    .so-wrap{gap:4px!important}
+    .laporan-date-row{display:flex!important;flex-direction:row!important;gap:6mm!important;margin-top:3mm!important}
+    .laporan-label{font-size:8px!important}
+    .official-table-card{break-inside:auto}
+    .official-table tr,.official-signoff{break-inside:avoid}
   }
   @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
@@ -266,52 +350,137 @@
   </section>
 
   <section id="rekapSec" hidden>
-    <div class="head noprint">
-      <h2>Rekap Audit KSU</h2>
-      <button id="rekapRefresh" class="ghost" type="button">Perbarui</button>
+    <div id="subTabs" class="tabs no-print" style="margin-bottom:12px">
+      <button type="button" data-sub="audit" aria-selected="true">Berita Acara Audit</button>
+      <button type="button" data-sub="minus" aria-selected="false">Barang Minus KSU</button>
+      <button type="button" data-sub="fisik" aria-selected="false">Input Fisik Gudang</button>
     </div>
-    <div class="mbtns noprint" style="margin:0 0 10px">
-      <button id="rekapPrint" type="button">Cetak / PDF</button>
-      <button id="rekapXlsx" class="ghost" type="button">Unduh Excel</button>
-    </div>
-    <p id="rekapInfo" class="hint noprint" style="margin:0 0 10px"></p>
 
-    <details class="noprint" id="gudangBox">
-      <summary>Input fisik KSU gudang</summary>
+    <div id="subAudit">
+      <div class="print-title-only"><h1>BERITA ACARA AUDIT STOK KSU</h1></div>
+      <div class="rp-head no-print">
+        <div>
+          <h2 class="rp-title">BERITA ACARA AUDIT STOK KSU</h2>
+          <p class="rp-sub">Laporan Rekapitulasi Kelengkapan Unit &amp; Stok Fisik Gudang</p>
+        </div>
+        <div class="rp-btns">
+          <button id="rekapPdf" type="button" class="b-emerald">Download PDF</button>
+          <button id="rekapExcel" type="button" class="b-emerald2">Download Excel</button>
+          <button id="rekapRefresh" type="button" class="b-indigo">Refresh Audit</button>
+        </div>
+      </div>
+      <div class="report-print-info laporan-header">
+        <p class="lh-cabang" id="printCabang">-</p>
+        <div class="laporan-date-row">
+          <div class="laporan-date-field"><span class="laporan-label">Tanggal Mulai Audit</span><p id="printTglMulai">-</p></div>
+          <div class="laporan-date-field"><span class="laporan-label">Tanggal Selesai Audit</span><p id="printTglSelesai">-</p></div>
+        </div>
+      </div>
+      <div class="rp-section no-print">
+        <h3>Rekap Audit KSU</h3>
+        <p>Ringkasan data audit kelengkapan unit dan stok fisik gudang</p>
+        <p id="rekapInfo" class="rp-info"></p>
+      </div>
+      <div id="rekapTables"></div>
+      <div id="kesimpulanAudit" class="no-print">
+        <div class="rp-section">
+          <h3>Kesimpulan Audit</h3>
+          <p>Ringkasan selisih tiap kategori: jenis/tipe klasifikasi, nominal selisih, dan total akhir.</p>
+        </div>
+        <div id="kesimpulanList" class="kes-grid"></div>
+        <div id="kesimpulanTotal" class="kes-total"></div>
+      </div>
+      <div id="signoffAudit" class="signoff-print-only"></div>
+    </div>
+
+    <div id="subMinus" hidden>
+      <div class="minus-report-print-only">
+        <h1>BERITA ACARA AUDIT STOK KSU</h1>
+        <h2>DAFTAR BARANG MINUS KSU</h2>
+        <p class="lh-cabang" id="minusPrintCabang">-</p>
+        <div class="laporan-date-row">
+          <div class="laporan-date-field"><span class="laporan-label">Tanggal Mulai Audit</span><p id="minusPrintTglMulai">-</p></div>
+          <div class="laporan-date-field"><span class="laporan-label">Tanggal Selesai Audit</span><p id="minusPrintTglSelesai">-</p></div>
+        </div>
+      </div>
+      <div class="rp-head no-print">
+        <div>
+          <h2 class="rp-title" style="font-size:1rem">Daftar Barang Minus KSU</h2>
+          <p id="minusStat" class="rp-sub">Memuat daftar barang minus...</p>
+        </div>
+        <div class="rp-btns">
+          <button id="minusPdf" type="button" class="b-emerald">Download PDF</button>
+          <button id="minusExcel" type="button" class="b-emerald2">Download Excel</button>
+          <button id="minusRefresh" type="button" class="b-indigo">Perbarui Daftar</button>
+        </div>
+      </div>
+      <div id="minusList"></div>
+      <div id="minusTotal" class="minus-total">TOTAL KESELURUHAN HARGA: -</div>
+      <div id="minusSignoff" class="minus-signoff-print-only"></div>
+    </div>
+
+    <div id="subFisik" class="no-print" hidden>
+      <h3 class="rp-fh">Input Hasil Penghitungan Fisik Gudang (Loose / Sparepart)</h3>
       <form id="gudangForm" autocomplete="off">
-        <label for="gKat">Kategori</label>
+        <label for="gKat" style="margin-top:0">Kategori Items</label>
         <select id="gKat">
-          <option value="Aki">Aki / Accu</option>
+          <option value="Aki">ACCU / Aki Motor</option>
           <option value="Helm">Helm</option>
           <option value="Spion">Spion</option>
           <option value="ToolKit">Tool Kit</option>
           <option value="PlatHolder">Plat Holder</option>
           <option value="SafetyRiding">Safety Riding</option>
         </select>
-        <label for="gJenis">Jenis / tipe</label>
+        <label for="gJenis">Klasifikasi / Jenis Tipe</label>
         <select id="gJenis"></select>
         <div class="row">
-          <div><label for="gQty">Jumlah (pcs)</label><input id="gQty" type="number" min="1" step="1" inputmode="numeric" value="1" required></div>
-          <div><label for="gCat">Catatan</label><input id="gCat" type="text"></div>
+          <div><label for="gQty">Jumlah Fisik di Gudang (Qty)</label><input id="gQty" type="number" min="1" step="1" inputmode="numeric" value="1" required></div>
+          <div><label for="gCat">Lokasi Rak / Catatan</label><input id="gCat" type="text" placeholder="Contoh: Rak A-02 / Dus Segel"></div>
         </div>
-        <button class="full" type="submit">Simpan fisik gudang</button>
+        <button class="full" type="submit">Simpan Data Fisik Gudang</button>
       </form>
-      <div id="gudangList" style="margin-top:12px"></div>
-    </details>
-
-    <div id="rekapPrintArea">
-      <div class="printonly">
-        <h2 style="text-align:center;margin:0">BERITA ACARA AUDIT STOK KSU</h2>
-        <p id="printMeta" style="text-align:center;margin:4px 0 14px"></p>
-      </div>
-      <div id="rekapKesimpulan"></div>
-      <div id="rekapTables"></div>
-      <h2 style="margin-top:18px">Daftar barang minus dan plus</h2>
-      <p id="minusStat" class="m" style="margin:0 0 8px"></p>
-      <div id="minusList"></div>
-      <p id="minusTotal" class="t" style="margin:8px 0 0"></p>
+      <h4 class="rp-fh" style="margin-top:18px">Riwayat Input Fisik Gudang</h4>
+      <div id="gudangList"></div>
     </div>
   </section>
+
+  <div id="modalLaporan" class="modal-bg no-print" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <h3 id="mTitle" style="margin:0 0 4px">Informasi Berita Acara KSU</h3>
+      <p class="hint" style="margin:0 0 10px">Isi cabang dan periode audit sebelum mencetak atau mengunduh PDF.</p>
+      <label for="mCabang" style="margin-top:0">Nama Cabang / Pos Dealer</label>
+      <select id="mCabang">
+        <option value="">Pilih Nama Cabang</option>
+        <option>PT Bintang Alam Jaya III Jurumudi (Tangerang)</option>
+        <option>PT Bintang Motor Jaya III Cinere</option>
+        <option>PT Bintang Motor Jaya I Cikarang</option>
+        <option>PT Bintang Motor Jaya IV Buaran</option>
+        <option>PT Bintang Mulia Jaya III Bengkulu</option>
+        <option>PT Bintang Motor Jaya V Pontianak</option>
+        <option>PT Bintang Alam Jaya I Cibitung</option>
+        <option>PT Bintang Alam Jaya II Banjaran</option>
+        <option>PT Bintang Motor Jaya II Cirebon</option>
+        <option>PT Bintang Niaga Jaya Cibinong</option>
+        <option>PT Bintang Kharisma Jaya I Bandar Lampung</option>
+        <option>PT Bintang Kharisma Jaya II Gisting</option>
+        <option>PT Bintang Mulia Jaya II Lampung Timur</option>
+        <option>PT Bintang Kharisma Jaya III Makassar</option>
+        <option>PT Bintang Kharisma Jaya IV Palopo</option>
+        <option>PT Bintang Mulia Jaya I Palembang</option>
+        <option>PT Bintang Mulia Jaya IV Lahat</option>
+        <option>PT Bintang Mulia Jaya V Sekayu</option>
+      </select>
+      <div class="row">
+        <div><label for="mMulai">Tanggal Mulai Audit</label><input id="mMulai" type="date" style="width:100%;min-height:48px;padding:8px;font:inherit;border:1.5px solid var(--line);border-radius:8px"></div>
+        <div><label for="mSelesai">Tanggal Selesai Audit</label><input id="mSelesai" type="date" style="width:100%;min-height:48px;padding:8px;font:inherit;border:1.5px solid var(--line);border-radius:8px"></div>
+      </div>
+      <p id="mError" class="val bad" role="alert" hidden></p>
+      <div class="mbtns" style="justify-content:flex-end;margin-top:14px">
+        <button id="mBatal" type="button" class="ghost">Batal</button>
+        <button id="mOk" type="button">Download PDF</button>
+      </div>
+    </div>
+  </div>
 
   <section id="masterSec" hidden>
     <h2>Data master</h2>
@@ -1207,6 +1376,7 @@ function applyTab() {
   $('masterSec').hidden = !ok || tab !== 'data';
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
   if (ok && tab === 'belum') renderBelum(true);
+  document.querySelector('main').classList.toggle('wide', ok && tab === 'rekap');
   if (ok && tab === 'rekap') renderRekap();
 }
 function switchTab(t) { tab = t; applyTab(); window.scrollTo(0, 0); }
@@ -1416,35 +1586,35 @@ function buildCards(d) {
   return [
     single(1, 'Aki'), single(2, 'Helm'), single(3, 'Spion'),
     { title: '4. TOOL KIT, PLAT HOLDER & SAFETY RIDING', hasTotal: false,
-      groups: comb.map(k => ({ kat: k, rows: k.rows, head: true })),
+      groups: comb.map(k => ({ kat: k, rows: k.rows })),
       tot: { ...sum(all), sel: all.reduce((t, r) => t + r.sel, 0) } }
   ];
 }
 
 function cardEl(card) {
-  const wrap = mk('div', 'cardx');
-  const bar = mk('div', 'bar2');
+  const wrap = mk('div', 'official-table-card');
+  const bar = mk('div', 'official-table-header-bar');
   bar.append(mk('div', '', card.title), mk('div', '', 'SATUAN: PCS'));
   wrap.append(bar);
-  const tw = mk('div', 'twrap'), t = mk('table', 'rk');
+  const tw = mk('div', 'official-table-wrap'), t = mk('table', 'official-table');
+  const cg = document.createElement('colgroup');
+  ['42px', '', '90px', '100px', '90px', '90px', '90px'].forEach(w => { const c = document.createElement('col'); if (w) c.style.width = w; cg.append(c); });
+  t.append(cg);
   const hr = mk('tr');
-  ['NO', 'JENIS / TIPE', 'STOK SISTEM', 'TERPASANG UNIT', 'FISIK GUDANG', 'SELISIH', 'STATUS'].forEach(h => hr.append(mk('th', '', h)));
+  ['NO', 'JENIS / TIPE KLASIFIKASI', 'STOK SISTEM', 'TERPASANG UNIT', 'FISIK GUDANG', 'SELISIH', 'STATUS'].forEach(h => hr.append(mk('th', '', h)));
   const th = mk('thead'); th.append(hr); t.append(th);
   const tb = mk('tbody');
+  let n = 0;
   for (const g of card.groups) {
-    let n = 0;
-    if (g.head) {
-      const tr = mk('tr', 'cat'), td = mk('td', '', `${KAT.indexOf(g.kat) + 1}. ${g.kat.title}`);
-      td.colSpan = 7; tr.append(td); tb.append(tr);
-    }
     g.rows.forEach(r => {
-      const tr = mk('tr', r.st === 'Minus' ? 'minus' : r.st === 'Plus' ? 'plus' : '');
-      [++n, r.jenis, r.s, r.u, r.g, r.sel, r.st].forEach(v => tr.append(mk('td', '', v)));
+      const tr = mk('tr', r.st === 'Minus' ? 'minus' : r.st === 'Plus' ? 'plus' : 'sesuai');
+      const cells = [[++n, 'b'], [r.jenis, 'l'], [r.s, ''], [r.u, ''], [r.g, ''], [r.sel, 'b'], [r.st, 'b']];
+      cells.forEach(([v, c]) => tr.append(mk('td', c, v)));
       tb.append(tr);
     });
   }
   if (card.hasTotal) {
-    const tr = mk('tr', 'tot'), td = mk('td', '', 'TOTAL AKHIR');
+    const tr = mk('tr', 'table-total-row'), td = mk('td', '', 'TOTAL AKHIR');
     td.colSpan = 2; tr.append(td);
     [card.tot.s, card.tot.u, card.tot.g, card.tot.sel, ''].forEach(v => tr.append(mk('td', '', v)));
     tb.append(tr);
@@ -1454,8 +1624,11 @@ function cardEl(card) {
 }
 
 function renderKesimpulan(cards) {
-  const box = $('rekapKesimpulan');
-  box.textContent = '';
+  const list = $('kesimpulanList'), tot = $('kesimpulanTotal');
+  list.textContent = '';
+  tot.textContent = '';
+  tot.className = 'kes-total';
+  if (!cards.length) return;
   const kecil = ['ToolKit', 'PlatHolder', 'SafetyRiding'];
   const data = cards.map(c => {
     const items = [];
@@ -1464,33 +1637,33 @@ function renderKesimpulan(cards) {
     }));
     return { title: c.title, total: c.tot.sel, items };
   });
+  const st = n => n < 0 ? 'minus' : n > 0 ? 'plus' : 'sesuai';
   const cls = n => n < 0 ? 'neg' : n > 0 ? 'pos' : '';
-  const badge = n => n < 0 ? 'MINUS' : n > 0 ? 'PLUS' : 'SESUAI';
-  const h = mk('h2', '', 'Kesimpulan'); box.append(h);
   data.forEach(d => {
-    const c = mk('div', 'kes'), head = mk('div', 'kh');
-    head.append(mk('span', '', d.title), mk('span', cls(d.total), badge(d.total)));
-    const p = mk('div');
+    const card = mk('div', 'kesimpulan-card'), head = mk('div', 'kesimpulan-head');
+    head.append(mk('span', 'kesimpulan-title', d.title), mk('span', 'kesimpulan-badge ' + st(d.total), st(d.total).toUpperCase()));
+    const p = mk('p', 'kesimpulan-text');
     p.append('Ditemukan selisih KSU dengan rincian: ');
     if (!d.items.length) p.append('tidak ditemukan selisih');
     d.items.forEach((it, i) => {
       if (i) p.append(', ');
       p.append(mk('b', '', it.label), ' ', mk('span', cls(it.sel), `${it.sel} pcs`));
     });
-    p.append('. ', mk('b', '', 'Total akhir:'), ' ', mk('span', cls(d.total), String(d.total)));
-    c.append(head, p); box.append(c);
+    p.append('. ', mk('b', '', 'Total akhir:'), ' ', mk('span', cls(d.total), `${d.total} pcs`), '.');
+    card.append(head, p);
+    list.append(card);
   });
   const grand = data.reduce((t, d) => t + d.total, 0);
-  const minus = data.reduce((t, d) => t + d.items.filter(i => i.sel < 0).reduce((s, i) => s + i.sel, 0), 0);
-  const plus = data.reduce((t, d) => t + d.items.filter(i => i.sel > 0).reduce((s, i) => s + i.sel, 0), 0);
-  const sum = mk('div', 'kes sum');
-  sum.append(
-    mk('div', '', `${data.filter(d => d.total < 0).length} kategori minus, ${data.filter(d => d.total > 0).length} kategori plus`),
-    mk('div', '', `Akumulasi selisih: ${minus} (minus) dan +${plus} (plus)`)
-  );
-  const g = mk('div', 'kh'); g.style.marginTop = '6px';
-  g.append(mk('span', '', 'Total keseluruhan selisih'), mk('span', cls(grand), `${grand} pcs`));
-  sum.append(g); box.append(sum);
+  const minus = data.reduce((t, d) => t + d.items.filter(i => i.sel < 0).reduce((x, i) => x + i.sel, 0), 0);
+  const plus = data.reduce((t, d) => t + d.items.filter(i => i.sel > 0).reduce((x, i) => x + i.sel, 0), 0);
+  tot.className = 'kes-total ' + st(grand);
+  const left = mk('div', 'kl'), p1 = mk('p'), p2 = mk('p');
+  p1.append(mk('span', 'neg', `${data.filter(d => d.total < 0).length} kategori minus`), ' \u00b7 ', mk('span', 'pos', `${data.filter(d => d.total > 0).length} kategori plus`));
+  p2.append('Akumulasi selisih: ', mk('span', 'neg', String(minus)), ' (minus) + ', mk('span', 'pos', String(plus)), ' (plus)');
+  left.append(p1, p2);
+  const right = mk('div', 'kr'), q = mk('p', '', 'Total Keseluruhan Selisih');
+  right.append(q, mk('p', 'kesimpulan-grand-value ' + st(grand), `${grand} pcs`));
+  tot.append(left, right);
 }
 
 // Daftar barang minus/plus: tampil jika ada selisih minus. Kartu Tool Kit/Plat Holder/Safety Riding hanya menampilkan minus.
@@ -1513,50 +1686,65 @@ function buildMinus(cards) {
 }
 const netMinus = items => items.reduce((t, i) => i.harga === '' ? t : t + (i.st === 'Plus' ? 1 : -1) * i.jumlah * Number(i.harga), 0);
 
-function renderMinus(items) {
+function renderMinus(items, hasNeg) {
   const box = $('minusList');
   box.textContent = '';
   const upd = () => {
     const mn = items.filter(i => i.st === 'Minus').length, pl = items.length - mn;
-    $('minusStat').textContent = items.length ? `${mn} Minus, ${pl} Plus. Total bersih: ${rupiah(netMinus(items))}` : 'Belum ada selisih minus pada Rekap Audit KSU.';
-    $('minusTotal').textContent = items.length ? `TOTAL KESELURUHAN HARGA: ${rupiah(netMinus(items))}` : '';
+    $('minusStat').textContent = items.length
+      ? `${mn} Minus | ${pl} Plus | Total Bersih: ${rupiah(netMinus(items))}`
+      : hasNeg ? 'Tidak ada hasil Minus atau Plus pada rekap KSU.' : 'Belum ada nilai Total Fisik minus pada Rekap Audit KSU.';
+    $('minusTotal').textContent = `TOTAL KESELURUHAN HARGA: ${items.length ? rupiah(netMinus(items)) : 'Rp 0'}`;
   };
-  if (!items.length) { upd(); return; }
+  if (!items.length) {
+    box.append(mk('p', 'empty', 'Daftar Minus dan Plus akan tampil setelah ada hasil Total Fisik minus.'));
+    upd();
+    return;
+  }
   const groups = new Map();
   items.forEach(i => { if (!groups.has(i.card)) groups.set(i.card, []); groups.get(i.card).push(i); });
   for (const [title, list] of groups) {
-    const wrap = mk('div', 'cardx'), bar = mk('div', 'bar2');
+    const wrap = mk('div', 'official-table-card'), bar = mk('div', 'official-table-header-bar');
     bar.append(mk('div', '', title), mk('div', '', 'SATUAN: PCS'));
-    const tw = mk('div', 'twrap'), t = mk('table', 'rk'), hr = mk('tr');
-    ['NO', 'JENIS / TIPE', 'SELISIH', 'HARGA SATUAN', 'KODE SPAREPART', 'TOTAL HARGA'].forEach(h => hr.append(mk('th', '', h)));
+    const tw = mk('div', 'official-table-wrap'), t = mk('table', 'official-table');
+    t.style.minWidth = '620px';
+    const cg = document.createElement('colgroup');
+    ['42px', '', '100px', '125px', '145px', '140px'].forEach(w => { const c = document.createElement('col'); if (w) c.style.width = w; cg.append(c); });
+    t.append(cg);
+    const hr = mk('tr');
+    ['NO', 'JENIS / TIPE KLASIFIKASI', 'SELISIH', 'HARGA SATUAN', 'KODE SPAREPART', 'TOTAL HARGA'].forEach(h => hr.append(mk('th', '', h)));
     const th = mk('thead'); th.append(hr); t.append(th);
     const tb = mk('tbody');
     list.forEach(i => {
       const tr = mk('tr', i.st === 'Minus' ? 'minus' : 'plus');
-      const out = mk('td', '', i.harga === '' ? '-' : rupiah(i.jumlah * Number(i.harga)));
+      const out = mk('td', 'r', i.harga === '' ? '-' : rupiah(i.jumlah * Number(i.harga)));
       const pIn = document.createElement('input');
-      pIn.type = 'number'; pIn.min = '0'; pIn.step = '1'; pIn.inputMode = 'numeric'; pIn.value = i.harga;
+      pIn.type = 'number'; pIn.min = '0'; pIn.step = '1'; pIn.inputMode = 'numeric'; pIn.value = i.harga; pIn.className = 'minus-field-screen';
       pIn.setAttribute('aria-label', 'Harga satuan ' + i.jenis);
+      const pOut = mk('span', 'minus-field-print', i.harga === '' ? '-' : rupiah(Number(i.harga)));
       pIn.addEventListener('input', () => {
         i.harga = pIn.value === '' ? '' : Number(pIn.value);
-        const st = lsGet('ksu_harga_barang_minus');
-        if (i.harga === '') delete st[i.key]; else st[i.key] = i.harga;
-        lsSet('ksu_harga_barang_minus', st);
+        const stg = lsGet('ksu_harga_barang_minus');
+        if (i.harga === '') delete stg[i.key]; else stg[i.key] = i.harga;
+        lsSet('ksu_harga_barang_minus', stg);
         out.textContent = i.harga === '' ? '-' : rupiah(i.jumlah * i.harga);
+        pOut.textContent = i.harga === '' ? '-' : rupiah(i.harga);
         upd();
       });
       const kIn = document.createElement('input');
-      kIn.type = 'text'; kIn.value = i.kode; kIn.style.textAlign = 'left';
+      kIn.type = 'text'; kIn.value = i.kode; kIn.className = 'minus-field-screen';
       kIn.setAttribute('aria-label', 'Kode sparepart ' + i.jenis);
+      const kOut = mk('span', 'minus-field-print', i.kode || '-');
       kIn.addEventListener('input', () => {
         i.kode = kIn.value.trim();
-        const st = lsGet('ksu_kode_sparepart_minus');
-        if (!i.kode) delete st[i.key]; else st[i.key] = i.kode;
-        lsSet('ksu_kode_sparepart_minus', st);
+        const stg = lsGet('ksu_kode_sparepart_minus');
+        if (!i.kode) delete stg[i.key]; else stg[i.key] = i.kode;
+        lsSet('ksu_kode_sparepart_minus', stg);
+        kOut.textContent = i.kode || '-';
       });
-      const tdP = mk('td'), tdK = mk('td');
-      tdP.append(pIn); tdK.append(kIn);
-      tr.append(mk('td', '', i.no), mk('td', '', i.jenis), mk('td', '', i.sel), tdP, tdK, out);
+      const tdP = mk('td', 'r'), tdK = mk('td', 'l');
+      tdP.append(pIn, pOut); tdK.append(kIn, kOut);
+      tr.append(mk('td', 'b', i.no), mk('td', 'l', i.jenis), mk('td', 'b', i.sel), tdP, tdK, out);
       tb.append(tr);
     });
     t.append(tb); tw.append(t); wrap.append(bar, tw); box.append(wrap);
@@ -1566,8 +1754,7 @@ function renderMinus(items) {
 
 async function renderRekap() {
   const d = rekapData = await hitungRekap();
-  const tgl = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
-  $('printMeta').textContent = `Tanggal: ${tgl}. Cabang: ${session ? session.cabang : '-'}. Petugas: ${session ? session.nama : '-'}`;
+  fillHeader();
   $('rekapInfo').textContent = !master
     ? 'Master belum diunggah, rekap belum bisa dihitung.'
     : `Master ${d.total.toLocaleString('id-ID')} unit, sudah diperiksa ${d.terperiksa.toLocaleString('id-ID')}. Entri fisik gudang: ${d.gudangN}.` +
@@ -1576,10 +1763,90 @@ async function renderRekap() {
   tables.textContent = '';
   const cards = buildCards(d);
   if (master) cards.forEach(c => tables.append(cardEl(c)));
+  else tables.append(mk('p', 'empty', 'Master belum diunggah.'));
   renderKesimpulan(master ? cards : []);
-  renderMinus(master ? buildMinus(cards) : []);
+  const items = master ? buildMinus(cards) : [];
+  renderMinus(items, master && cards.some(c => c.groups.some(g => g.rows.some(r => r.sel < 0))));
   renderGudangList();
 }
+
+/* ---------- Sub-tab, kop laporan, modal, dan cetak ---------- */
+const SIGN = (role, person) => `<div class="official-signoff"><div><p class="role">${role}</p></div><div><div class="line"></div><p class="person">${person}</p></div></div>`;
+const SIGNOFF_HTML = `<div class="so-wrap"><p class="so-head">DISEPAKATI,</p><div class="signoff-4-col">` +
+  [['Tim Auditor / Opname', 'Auditor'], ['Kepala Gudang / Logistics', 'Head Warehouse'], ['Admin Dept. Head', 'ADH Cabang'], ['Kepala Cabang', 'Branch Manager']].map(x => SIGN(...x)).join('') +
+  `</div><p class="so-head">MENGETAHUI,</p><div class="signoff-2-col">` +
+  [['Supervisor Audit', 'Supervisor'], ['Manager Operasional', 'Manager Ops']].map(x => SIGN(...x)).join('') + `</div></div>`;
+$('signoffAudit').innerHTML = SIGNOFF_HTML;   // markup konstan, tanpa data pengguna
+$('minusSignoff').innerHTML = SIGNOFF_HTML;
+
+function showSub(sub) {
+  $('subAudit').hidden = sub !== 'audit';
+  $('subMinus').hidden = sub !== 'minus';
+  $('subFisik').hidden = sub !== 'fisik';
+  document.querySelectorAll('#subTabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.sub === sub)));
+}
+document.querySelectorAll('#subTabs button').forEach(b => b.addEventListener('click', () => showSub(b.dataset.sub)));
+
+const fmtTgl = v => { if (!v) return '-'; const [y, m, d] = v.split('-'); return `${d}/${m}/${y}`; };
+function ksuHeader() {
+  try { return { cabang: localStorage.getItem('ksu_cabang') || '', mulai: localStorage.getItem('ksu_tgl_mulai') || '', selesai: localStorage.getItem('ksu_tgl_selesai') || '' }; }
+  catch (_) { return { cabang: '', mulai: '', selesai: '' }; }
+}
+function fillHeader() {
+  const h = ksuHeader();
+  ['printCabang', 'minusPrintCabang'].forEach(id => { $(id).textContent = h.cabang || '-'; });
+  ['printTglMulai', 'minusPrintTglMulai'].forEach(id => { $(id).textContent = fmtTgl(h.mulai); });
+  ['printTglSelesai', 'minusPrintTglSelesai'].forEach(id => { $(id).textContent = fmtTgl(h.selesai); });
+}
+
+let aksiLaporan = 'pdf';
+function bukaModal(aksi) {
+  aksiLaporan = aksi;
+  const today = new Date().toISOString().slice(0, 10), h = ksuHeader(), sel = $('mCabang');
+  sel.value = [...sel.options].some(o => o.value === h.cabang) ? h.cabang : '';
+  $('mMulai').value = h.mulai || today;
+  $('mSelesai').value = h.selesai || today;
+  $('mError').hidden = true;
+  $('mOk').textContent = aksi.endsWith('excel') ? 'Download Excel' : 'Download PDF';
+  $('modalLaporan').hidden = false;
+  sel.focus();
+}
+const tutupModal = () => { $('modalLaporan').hidden = true; };
+$('mBatal').addEventListener('click', tutupModal);
+$('modalLaporan').addEventListener('click', e => { if (e.target === $('modalLaporan')) tutupModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modalLaporan').hidden) tutupModal(); });
+
+async function jalankanExcel(mode) {
+  const btn = $('mOk');
+  try { await unduhExcelRekap(mode); } catch (e) { toast('Gagal membuat Excel: ' + (e && e.message || e), true); }
+  btn.disabled = false;
+}
+$('mOk').addEventListener('click', () => {
+  const cabang = $('mCabang').value.trim(), a = $('mMulai').value, b = $('mSelesai').value;
+  const err = m => { $('mError').textContent = m; $('mError').hidden = false; };
+  if (!cabang) return err('Pilih nama cabang terlebih dahulu.');
+  if (!a || !b) return err('Isi tanggal mulai dan tanggal selesai audit.');
+  if (a > b) return err('Tanggal mulai audit tidak boleh setelah tanggal selesai.');
+  try { localStorage.setItem('ksu_cabang', cabang); localStorage.setItem('ksu_tgl_mulai', a); localStorage.setItem('ksu_tgl_selesai', b); } catch (_) {}
+  fillHeader();
+  tutupModal();
+  if (aksiLaporan === 'excel') return jalankanExcel('all');
+  if (aksiLaporan === 'minus-excel') return jalankanExcel('minus');
+  const minus = aksiLaporan === 'minus-pdf';
+  showSub(minus ? 'minus' : 'audit');
+  if (minus) {
+    document.body.classList.add('print-minus-ksu');
+    window.addEventListener('afterprint', () => document.body.classList.remove('print-minus-ksu'), { once: true });
+  }
+  setTimeout(() => window.print(), 80); // beri waktu browser menata ulang sebelum dialog cetak
+});
+$('rekapPdf').addEventListener('click', () => bukaModal('pdf'));
+$('rekapExcel').addEventListener('click', () => bukaModal('excel'));
+$('minusPdf').addEventListener('click', () => bukaModal('minus-pdf'));
+$('minusExcel').addEventListener('click', () => bukaModal('minus-excel'));
+const segarkan = async () => { await syncDone(); renderRekap(); };
+$('rekapRefresh').addEventListener('click', segarkan);
+$('minusRefresh').addEventListener('click', segarkan);
 
 /* ---------- Fisik KSU gudang ---------- */
 function fillJenis() {
@@ -1654,11 +1921,9 @@ async function hapusGudang(g) {
   renderRekap();
 }
 
-$('rekapRefresh').addEventListener('click', async () => { await syncDone(); renderRekap(); });
-$('rekapPrint').addEventListener('click', () => window.print());
 
 /* ---------- Unduh Excel rekap ---------- */
-async function unduhExcelRekap() {
+async function unduhExcelRekap(mode) {
   if (typeof ExcelJS === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   if (!master) return toast('Master belum diunggah.', true);
   const d = await hitungRekap(), cards = buildCards(d), minus = buildMinus(cards);
@@ -1673,7 +1938,8 @@ async function unduhExcelRekap() {
   ws.getCell('A1').value = 'BERITA ACARA AUDIT STOK KSU';
   ws.getCell('A1').font = { bold: true, size: 14 }; ws.getCell('A1').alignment = { horizontal: 'center' };
   ws.mergeCells('A2:G2');
-  ws.getCell('A2').value = `Tanggal: ${tgl}. Cabang: ${session ? session.cabang : '-'}. Petugas: ${session ? session.nama : '-'}`;
+  const hd = ksuHeader();
+  ws.getCell('A2').value = `${hd.cabang || '-'}  |  Periode audit: ${fmtTgl(hd.mulai)} s/d ${fmtTgl(hd.selesai)}`;
   ws.getCell('A2').alignment = { horizontal: 'center' };
   let r = 4;
   for (const c of cards) {
@@ -1684,8 +1950,8 @@ async function unduhExcelRekap() {
     hdr.values = ['NO', 'JENIS / TIPE', 'STOK SISTEM', 'TERPASANG UNIT', 'FISIK GUDANG', 'SELISIH', 'STATUS'];
     hdr.eachCell(cl => { cl.font = { bold: true }; cl.fill = fill('FFF1F2EE'); cl.border = bd; cl.alignment = { horizontal: 'center' }; });
     r++;
+    let n = 0;
     for (const g of c.groups) {
-      let n = 0;
       if (g.head) {
         ws.mergeCells(`A${r}:G${r}`);
         const cl = ws.getCell(`A${r}`);
@@ -1739,17 +2005,12 @@ async function unduhExcelRekap() {
     row.eachCell({ includeEmpty: true }, cl => { cl.border = bd; });
   });
 
+  if (mode === 'minus') { wb.removeWorksheet('Rekap KSU'); wb.removeWorksheet('Fisik Gudang'); }
   const buf = await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-    `rekap-audit-ksu-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    `${mode === 'minus' ? 'barang-minus-ksu' : 'rekap-audit-ksu'}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   toast('Excel rekap diunduh.');
 }
-$('rekapXlsx').addEventListener('click', async () => {
-  const b = $('rekapXlsx');
-  b.disabled = true;
-  try { await unduhExcelRekap(); } catch (e) { toast('Gagal membuat Excel: ' + (e && e.message || e), true); }
-  finally { b.disabled = false; }
-});
 
 /* ---------- Warehouse pendukung (file ke-2 sampai ke-6) ---------- */
 const WAREHOUSE_TIDAK_TERDATA = 'Tidak Terdata di File 1';
