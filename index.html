@@ -228,10 +228,6 @@
   }
   @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js" defer></script>
 </head>
 <body>
 
@@ -655,6 +651,7 @@ const blobToDataURL = b => new Promise((res, rej) => {
 
 // Tulis tag GPS dan tanggal ke metadata EXIF (terbaca di galeri HP / Google Photos). Gagal = foto tetap dipakai apa adanya.
 async function addExif(blob, geo, when) {
+  if (typeof piexif === 'undefined') await needLib('piexif');
   if (typeof piexif === 'undefined' || blob.type !== 'image/jpeg') return blob;
   try {
     const p = n => String(n).padStart(2, '0');
@@ -742,7 +739,7 @@ $('masterFile').addEventListener('change', async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
-  if (typeof XLSX === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!(await needLib('XLSX'))) return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   try {
     const m = parseMaster(await f.arrayBuffer(), f.name);
     await putMaster(m);
@@ -1139,7 +1136,7 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(u), 10000);
 }
 $('zipAll').addEventListener('click', async () => {
-  if (typeof JSZip === 'undefined') return toast('Library ZIP belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!(await needLib('JSZip'))) return toast('Library ZIP belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   const recs = await allRecs();
   if (!recs.length) return toast('Belum ada foto.', true);
   const btn = $('zipAll');
@@ -1251,13 +1248,46 @@ const getAuth = id => authRun('readonly', s => s.get(id));
 const putAuth = a => authRun('readwrite', s => s.put(a));
 const hex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-async function callGas(payload) {
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ room: ROOM, ...payload })
-  });
-  return res.json();
+// timeoutMs > 0: batalkan jika server tidak menjawab dalam waktu itu (dipakai saat login agar tidak menggantung)
+async function callGas(payload, timeoutMs = 0) {
+  const ctl = timeoutMs ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : 0;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ room: ROOM, ...payload }),
+      signal: ctl ? ctl.signal : undefined
+    });
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Library besar (Excel, ZIP, EXIF) dimuat setelah login dan room dipilih, bukan di layar login,
+// supaya tidak berebut kecepatan internet dengan permintaan login.
+let libsLoaded = false, libsReady = Promise.resolve();
+function loadLibs() {
+  if (libsLoaded) return;
+  libsLoaded = true;
+  libsReady = Promise.all(['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js'].map(src => new Promise(res => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.async = true;
+    el.onload = el.onerror = () => res();
+    document.head.append(el);
+  })));
+}
+// Tunggu library tertentu bila masih dimuat (maksimal 4 detik), lalu laporkan apakah tersedia
+async function needLib(name) {
+  if (typeof window[name] !== 'undefined') return true;
+  loadLibs();
+  await Promise.race([libsReady, new Promise(r => setTimeout(r, 4000))]);
+  return typeof window[name] !== 'undefined';
 }
 
 // Verifikasi password lokal (untuk login offline): PBKDF2 dengan salt acak, password tidak disimpan
@@ -1298,7 +1328,7 @@ function showSesi() {
   if (ok && !ROOM) renderRoomPicker();
 }
 function startSession(nama, cabang, ticket, rooms) {
-  session = { nama, cabang: cabang || '', ticket: ticket || '', rooms: rooms || [] };
+  session = { nama, cabang: cabang || '', ticket: ticket || '', rooms: rooms || [], at: Date.now() };
   try {
     sessionStorage.setItem('so_session', JSON.stringify(session)); // hilang saat tab/browser ditutup
     localStorage.setItem('so_user', JSON.stringify({ p: nama }));  // hanya untuk mengisi nama berikutnya
@@ -1318,17 +1348,20 @@ $('loginForm').addEventListener('submit', async e => {
     if (pw !== $('pass2').value) return loginMsg('Pengulangan password tidak sama.');
   }
   const btn = $('sesiOk');
+  const labelBtn = () => loginMode === 'create' ? 'Buat password dan masuk' : 'Masuk';
   btn.disabled = true;
+  btn.textContent = 'Memeriksa...';
   loginMsg('');
+  let timedOut = false;
   try {
     if (navigator.onLine && configured()) {
       let j = null;
       try {
-        j = await callGas({ action: loginMode === 'create' ? 'setPassword' : 'login', nama, password: pw });
-      } catch (_) { j = null; } // jaringan gagal: coba login offline di bawah
+        j = await callGas({ action: loginMode === 'create' ? 'setPassword' : 'login', nama, password: pw }, 15000);
+      } catch (err) { j = null; timedOut = !!(err && err.name === 'AbortError'); } // gagal/lambat: coba login offline di bawah
       if (j) {
         if (j.ok) {
-          try { await saveLocalAuth(j.nama, j.cabang, pw, j.ticket, j.rooms); } catch (_) {}
+          saveLocalAuth(j.nama, j.cabang, pw, j.ticket, j.rooms).catch(() => {}); // cache offline disimpan di latar belakang
           return startSession(j.nama, j.cabang, j.ticket, j.rooms);
         }
         if (j.code === 'set_password') {
@@ -1340,16 +1373,17 @@ $('loginForm').addEventListener('submit', async e => {
         return loginMsg(j.error || 'Login gagal.');
       }
     }
-    if (loginMode === 'create') return loginMsg('Membuat password butuh koneksi internet.');
+    if (loginMode === 'create') return loginMsg(timedOut ? 'Server lambat merespons. Coba lagi sebentar lagi.' : 'Membuat password butuh koneksi internet.');
     if (!(window.crypto && crypto.subtle)) return loginMsg('Login offline butuh halaman HTTPS. Sambungkan internet lalu coba lagi.');
     const local = await getAuth(authId(nama));
-    if (!local) return loginMsg('Perangkat ini belum pernah dipakai login. Sambungkan internet untuk login pertama kali.');
+    if (!local) return loginMsg(timedOut ? 'Server lambat merespons. Coba lagi sebentar lagi.' : 'Perangkat ini belum pernah dipakai login. Sambungkan internet untuk login pertama kali.');
     if (await derive(pw, local.salt) !== local.hash) return loginMsg('Password salah.');
     startSession(local.nama, local.cabang, local.ticket, local.rooms);
   } catch (err) {
     loginMsg('Gagal masuk: ' + (err && err.message || err));
   } finally {
     btn.disabled = false;
+    btn.textContent = labelBtn();
   }
 });
 
@@ -1375,6 +1409,7 @@ function drawRooms() {
 async function renderRoomPicker() {
   drawRooms();
   if (!navigator.onLine || !configured() || !session) return; // offline: pakai daftar tersimpan
+  if (Date.now() - (session.at || 0) < 120000) return;          // baru login: daftar room sudah terbaru
   try {
     const j = await callGas({ action: 'rooms', petugas: session.nama, ticket: session.ticket });
     if (j.ok && Array.isArray(j.rooms)) {
@@ -2134,7 +2169,7 @@ async function hapusGudang(g) {
 
 /* ---------- Unduh Excel rekap ---------- */
 async function unduhExcelRekap(mode) {
-  if (typeof ExcelJS === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!(await needLib('ExcelJS'))) return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   if (!master) return toast('Master belum diunggah.', true);
   const d = await hitungRekap(), cards = buildCards(d), minus = buildMinus(cards);
   const wb = new ExcelJS.Workbook();
@@ -2360,7 +2395,7 @@ $('whFile').addEventListener('change', async e => {
   if (!f) return;
   const slot = $('whSlot').value;
   if (!master) return toast('Unggah master (file ke-1) lebih dulu.', true);
-  if (typeof XLSX === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!(await needLib('XLSX'))) return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   try {
     const p = parseWh(await f.arrayBuffer());
     if (!p.rows.length) throw new Error('Tidak ada baris yang punya kolom Warehouse/Lokasi.');
@@ -2382,7 +2417,7 @@ $('whFile').addEventListener('change', async e => {
 
 /* ---------- Ekspor hasil opname per unit ---------- */
 async function unduhHasilUnit() {
-  if (typeof XLSX === 'undefined') return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
+  if (!(await needLib('XLSX'))) return toast('Library Excel belum termuat. Sambungkan internet lalu muat ulang halaman.', true);
   if (!unitList.length) return toast('Belum ada data unit. Unggah master dulu.', true);
   const [hE, hC] = await hasilMap();
   const tick = v => v ? '✓' : '-';
@@ -2445,6 +2480,7 @@ $('exportHasil').addEventListener('click', async () => {
     updateNet();
     return;
   }
+  loadLibs();
   try {
     db = await openDB();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
