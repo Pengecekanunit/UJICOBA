@@ -50,7 +50,10 @@
   .photo .file{flex:1;min-width:0}
   .file input{width:100%;font:inherit}
   #preview{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#fff}
-  #sesiView{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  #sesiView{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+  .roombtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:60px;margin-bottom:8px;padding:10px 14px;text-align:left;background:#fff;color:var(--ink);border:1.5px solid var(--line);font-weight:400}
+  .roombtn .rn{font-weight:650}
+  .roombtn .rc{font-size:13px;color:var(--muted)}
   #sesiView button{min-height:42px;font-size:15px}
   #sesiText{font-weight:650;overflow-wrap:anywhere}
   .hint{font-size:13px;color:var(--muted);margin:6px 0 0}
@@ -243,31 +246,28 @@
   </div>
 
   <section id="roomSec" hidden>
-    <form id="roomForm" autocomplete="off">
-      <h2>Masuk ke room</h2>
-      <p class="hint" style="margin:-4px 0 12px">Room memisahkan data antar cabang atau kegiatan opname, jadi master, hasil opname, dan rekap tidak tercampur. Minta kode room dari admin.</p>
-      <label for="roomCode" style="margin-top:0">Kode room</label>
-      <input id="roomCode" class="mono" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="24">
-      <div id="roomMsg" class="val bad" role="alert" hidden></div>
-      <button id="roomOk" class="full" type="submit">Lanjut ke login</button>
-    </form>
+    <h2>Pilih room</h2>
+    <p class="hint" style="margin:-4px 0 12px">Room memisahkan data antar cabang atau kegiatan opname, jadi master, hasil opname, dan rekap tidak tercampur. Pilih room tempat Anda bertugas.</p>
+    <div id="roomList"></div>
+    <div id="roomMsg" class="val bad" role="alert" hidden></div>
+    <button id="roomKeluar" class="ghost full" type="button" style="margin-top:10px">Keluar</button>
   </section>
 
   <section id="sesi">
     <div id="sesiView" hidden>
       <div>
-        <div class="m">Petugas dan cabang</div>
+        <div class="m">Masuk sebagai</div>
         <div id="sesiText"></div>
       </div>
-      <button id="sesiUbah" class="ghost" type="button">Keluar</button>
+      <div class="acts" style="flex-direction:row">
+        <button id="roomGanti" class="ghost" type="button">Ganti room</button>
+        <button id="sesiUbah" class="ghost" type="button">Keluar</button>
+      </div>
     </div>
     <form id="loginForm" autocomplete="on">
       <h2>Masuk untuk memulai opname</h2>
-      <p class="hint" style="margin:-4px 0 10px">Room: <b id="loginRoom"></b></p>
       <label for="petugas" style="margin-top:0">Nama petugas</label>
       <input id="petugas" type="text" autocomplete="username">
-      <label for="cabang">Kode cabang</label>
-      <input id="cabang" type="text" autocomplete="off" autocapitalize="characters">
       <label for="pass">Password</label>
       <input id="pass" type="password" autocomplete="current-password">
       <div id="pass2Wrap" hidden>
@@ -276,8 +276,7 @@
       </div>
       <div id="loginMsg" class="val bad" role="alert" hidden></div>
       <button id="sesiOk" class="full" type="submit">Masuk</button>
-      <button id="roomGanti" class="ghost full" type="button" style="margin-top:10px">Ganti room</button>
-      <p class="hint">Nama dan cabang harus sudah didaftarkan admin. Password dibuat sendiri oleh petugas saat login pertama (butuh internet), dan hanya diketahui oleh petugas itu.</p>
+      <p class="hint">Nama petugas harus sudah didaftarkan admin. Setelah masuk, Anda memilih room. Password dibuat sendiri oleh petugas saat login pertama (butuh internet), dan hanya diketahui oleh petugas itu.</p>
     </form>
   </section>
 
@@ -567,7 +566,12 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxJzyeAXldEHX7CDcbjVoVs
 // Room: pemisah data antar cabang/kegiatan. Semua data lokal (database) dan data server dipisah per room.
 const normRoom = s => String(s || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
 let ROOM = '', ROOM_NAME = '';
-try { ROOM = normRoom(localStorage.getItem('so_room')); ROOM_NAME = localStorage.getItem('so_room_name') || ''; } catch (_) {}
+try {
+  if (sessionStorage.getItem('so_session')) { // room dipilih setelah login, berlaku per tab
+    ROOM = normRoom(sessionStorage.getItem('so_room'));
+    ROOM_NAME = sessionStorage.getItem('so_room_name') || '';
+  }
+} catch (_) {}
 const RS = ROOM ? '_' + ROOM : '';   // akhiran untuk kunci localStorage
 
 const DB_NAME = 'stok-opname' + (ROOM ? '-' + ROOM : ''), STORE = 'records', META = 'meta';
@@ -1042,7 +1046,7 @@ $('form').addEventListener('submit', async e => {
       id: uid(),
       dibuat: new Date().toISOString(),
       petugas: session.nama,
-      kodeCabang: session.cabang,
+      kodeCabang: session.cabang || ROOM,
       ticket: session.ticket,
       engineNo: eNo,
       chasisNo: cNo,
@@ -1222,13 +1226,29 @@ async function refreshSyncBtn(pend) {
   $('sync').disabled = !navigator.onLine || pend === 0;
 }
 
-/* ---------- Identitas petugas (diisi sekali) ---------- */
-let session = null;       // { nama, cabang, ticket }
+/* ---------- Login petugas, lalu pilih room ---------- */
+let session = null;       // { nama, cabang, ticket, rooms: [{ kode, nama }] }
 let loginMode = 'login';  // 'login' | 'create' (buat password pertama kali)
 
-const authId = (n, c) => 'auth:' + n.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + c.trim().toUpperCase();
-const getAuth = id => run(META, 'readonly', s => s.get(id));
-const putAuth = a => run(META, 'readwrite', s => s.put(a));
+// Cache login offline disimpan di database terpisah, karena saat login room belum dipilih
+let authDbP = null;
+const authDb = () => authDbP || (authDbP = new Promise((res, rej) => {
+  const r = indexedDB.open('stok-opname-auth', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('auth', { keyPath: 'id' });
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+}));
+async function authRun(mode, fn) {
+  const d = await authDb();
+  return new Promise((res, rej) => {
+    const t = d.transaction('auth', mode), q = fn(t.objectStore('auth'));
+    t.oncomplete = () => res(q && q.result);
+    t.onerror = t.onabort = () => rej(t.error);
+  });
+}
+const authId = n => 'auth:' + n.trim().toLowerCase().replace(/\s+/g, ' ');
+const getAuth = id => authRun('readonly', s => s.get(id));
+const putAuth = a => authRun('readwrite', s => s.put(a));
 const hex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 
 async function callGas(payload) {
@@ -1247,10 +1267,10 @@ async function derive(pw, salt) {
   return hex(await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: 150000 }, key, 256));
 }
-async function saveLocalAuth(nama, cabang, pw, ticket) {
+async function saveLocalAuth(nama, cabang, pw, ticket, rooms) {
   if (!(window.crypto && crypto.subtle)) return;
   const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  await putAuth({ id: authId(nama, cabang), nama, cabang, salt, hash: await derive(pw, salt), ticket });
+  await putAuth({ id: authId(nama), nama, cabang, salt, hash: await derive(pw, salt), ticket, rooms });
 }
 
 function loginMsg(t) {
@@ -1263,36 +1283,36 @@ function resetLoginMode() {
   $('pass2Wrap').hidden = true;
   $('sesiOk').textContent = 'Masuk';
 }
-['petugas', 'cabang'].forEach(id => $(id).addEventListener('input', resetLoginMode));
+$('petugas').addEventListener('input', resetLoginMode);
 
+const roomLabel = () => ROOM ? `Room: ${ROOM}${ROOM_NAME && ROOM_NAME !== ROOM ? ' (' + ROOM_NAME + ')' : ''}` : '';
 function showSesi() {
   const ok = !!session;
-  $('roomSec').hidden = !!ROOM;
-  $('loginForm').hidden = ok || !ROOM;
-  $('roomTag').textContent = ROOM ? `Room: ${ROOM}${ROOM_NAME && ROOM_NAME !== ROOM ? ' (' + ROOM_NAME + ')' : ''}` : '';
-  $('loginRoom').textContent = ROOM ? (ROOM_NAME && ROOM_NAME !== ROOM ? `${ROOM} (${ROOM_NAME})` : ROOM) : '-';
-  $('sesiView').hidden = !ok;
+  $('sesi').hidden = ok && !ROOM;              // sedang memilih room: kartu login disembunyikan
+  $('loginForm').hidden = ok;
+  $('sesiView').hidden = !(ok && ROOM);
+  $('roomSec').hidden = !(ok && !ROOM);
+  $('roomTag').textContent = roomLabel();
   applyTab();
-  $('sesiText').textContent = ok ? `${session.nama}, cabang ${session.cabang}` : '';
-  if (ok) { $('petugas').value = session.nama; $('cabang').value = session.cabang; }
+  $('sesiText').textContent = ok ? session.nama + (session.cabang ? `, ${session.cabang}` : '') : '';
+  if (ok && !ROOM) renderRoomPicker();
 }
-function startSession(nama, cabang, ticket) {
-  session = { nama, cabang, ticket: ticket || '', room: ROOM };
+function startSession(nama, cabang, ticket, rooms) {
+  session = { nama, cabang: cabang || '', ticket: ticket || '', rooms: rooms || [] };
   try {
     sessionStorage.setItem('so_session', JSON.stringify(session)); // hilang saat tab/browser ditutup
-    localStorage.setItem('so_user', JSON.stringify({ p: nama, c: cabang })); // hanya untuk mengisi nama berikutnya
+    localStorage.setItem('so_user', JSON.stringify({ p: nama }));  // hanya untuk mengisi nama berikutnya
   } catch (_) {}
   $('pass').value = ''; $('pass2').value = '';
   resetLoginMode();
   loginMsg('');
   showSesi();
-  $('engine').focus();
 }
 
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const nama = $('petugas').value.trim(), cabang = $('cabang').value.trim().toUpperCase(), pw = $('pass').value;
-  if (!nama || !cabang || !pw) return loginMsg('Isi nama, kode cabang, dan password.');
+  const nama = $('petugas').value.trim(), pw = $('pass').value;
+  if (!nama || !pw) return loginMsg('Isi nama petugas dan password.');
   if (loginMode === 'create') {
     if (pw.length < 6) return loginMsg('Password minimal 6 karakter.');
     if (pw !== $('pass2').value) return loginMsg('Pengulangan password tidak sama.');
@@ -1304,12 +1324,12 @@ $('loginForm').addEventListener('submit', async e => {
     if (navigator.onLine && configured()) {
       let j = null;
       try {
-        j = await callGas({ action: loginMode === 'create' ? 'setPassword' : 'login', nama, cabang, password: pw });
+        j = await callGas({ action: loginMode === 'create' ? 'setPassword' : 'login', nama, password: pw });
       } catch (_) { j = null; } // jaringan gagal: coba login offline di bawah
       if (j) {
         if (j.ok) {
-          try { await saveLocalAuth(j.nama, j.cabang, pw, j.ticket); } catch (_) {}
-          return startSession(j.nama, j.cabang, j.ticket);
+          try { await saveLocalAuth(j.nama, j.cabang, pw, j.ticket, j.rooms); } catch (_) {}
+          return startSession(j.nama, j.cabang, j.ticket, j.rooms);
         }
         if (j.code === 'set_password') {
           loginMode = 'create';
@@ -1322,10 +1342,10 @@ $('loginForm').addEventListener('submit', async e => {
     }
     if (loginMode === 'create') return loginMsg('Membuat password butuh koneksi internet.');
     if (!(window.crypto && crypto.subtle)) return loginMsg('Login offline butuh halaman HTTPS. Sambungkan internet lalu coba lagi.');
-    const local = await getAuth(authId(nama, cabang));
+    const local = await getAuth(authId(nama));
     if (!local) return loginMsg('Perangkat ini belum pernah dipakai login. Sambungkan internet untuk login pertama kali.');
     if (await derive(pw, local.salt) !== local.hash) return loginMsg('Password salah.');
-    startSession(local.nama, local.cabang, local.ticket);
+    startSession(local.nama, local.cabang, local.ticket, local.rooms);
   } catch (err) {
     loginMsg('Gagal masuk: ' + (err && err.message || err));
   } finally {
@@ -1333,12 +1353,62 @@ $('loginForm').addEventListener('submit', async e => {
   }
 });
 
-$('sesiUbah').addEventListener('click', () => {
-  session = null;
-  try { sessionStorage.removeItem('so_session'); } catch (_) {}
-  $('pass').value = '';
-  showSesi();
-  $('pass').focus();
+/* ----- Pilih room (setelah login) ----- */
+function roomMsg(t) { const el = $('roomMsg'); el.hidden = !t; el.textContent = t || ''; }
+function drawRooms() {
+  const box = $('roomList');
+  box.textContent = '';
+  roomMsg('');
+  const rooms = (session && session.rooms) || [];
+  if (!rooms.length) return roomMsg('Belum ada room yang bisa Anda masuki. Hubungi admin.');
+  let last = '';
+  try { last = localStorage.getItem('so_room_last') || ''; } catch (_) {}
+  [...rooms].sort((a, b) => (b.kode === last) - (a.kode === last)).forEach(r => {
+    const b = mk('button', 'roombtn');
+    b.type = 'button';
+    b.append(mk('span', 'rn', r.nama), mk('span', 'rc mono', r.kode));
+    if (r.kode === last) b.append(mk('span', 'badge synced', 'Terakhir dipakai'));
+    b.addEventListener('click', () => masukRoom(r.kode, r.nama));
+    box.append(b);
+  });
+}
+async function renderRoomPicker() {
+  drawRooms();
+  if (!navigator.onLine || !configured() || !session) return; // offline: pakai daftar tersimpan
+  try {
+    const j = await callGas({ action: 'rooms', petugas: session.nama, ticket: session.ticket });
+    if (j.ok && Array.isArray(j.rooms)) {
+      if (JSON.stringify(j.rooms) !== JSON.stringify(session.rooms)) {
+        session.rooms = j.rooms;
+        try { sessionStorage.setItem('so_session', JSON.stringify(session)); } catch (_) {}
+        if (!ROOM) drawRooms();
+      }
+    } else if (j.code === 'auth') {
+      keluar();
+    }
+  } catch (_) {}
+}
+function masukRoom(code, nama) {
+  try {
+    sessionStorage.setItem('so_room', code);
+    sessionStorage.setItem('so_room_name', nama || '');
+    localStorage.setItem('so_room_last', code);
+  } catch (_) {}
+  location.reload(); // mulai bersih: database, master, dan data milik room yang dipilih
+}
+function keluar() {
+  try {
+    sessionStorage.removeItem('so_session');
+    sessionStorage.removeItem('so_room');
+    sessionStorage.removeItem('so_room_name');
+  } catch (_) {}
+  location.reload();
+}
+$('sesiUbah').addEventListener('click', keluar);
+$('roomKeluar').addEventListener('click', keluar);
+$('roomGanti').addEventListener('click', () => {
+  try { sessionStorage.removeItem('so_room'); sessionStorage.removeItem('so_room_name'); } catch (_) {}
+  location.reload();
 });
 
 /* ---------- Status opname & checklist KSU ---------- */
@@ -1428,7 +1498,7 @@ document.querySelectorAll('input[name=statusOp]').forEach(r => r.addEventListene
 let tab = 'opname', doneServer = [], belumCache = null, belumMode = 'belum';
 
 function applyTab() {
-  const ok = !!session;
+  const ok = !!session && !!ROOM;
   $('tabs').hidden = !ok;
   $('inputSec').hidden = !ok || tab !== 'opname';
   $('listSec').hidden = !ok || tab !== 'opname';
@@ -2003,7 +2073,7 @@ async function pushGudang() {
     if (g.synced) continue;
     try {
       const j = await callGas({ action: 'gudangAdd', id: g.id, kategori: g.kategori, jenis: g.jenis, qty: g.qty,
-        catatan: g.catatan, waktu: g.waktu, petugas: session.nama, kodeCabang: session.cabang, ticket: session.ticket });
+        catatan: g.catatan, waktu: g.waktu, petugas: session.nama, kodeCabang: session.cabang || ROOM, ticket: session.ticket });
       if (j.ok) { g.synced = true; await gudangPut(g); }
     } catch (_) {}
   }
@@ -2052,7 +2122,7 @@ async function hapusGudang(g) {
   if (g.synced) {
     if (!navigator.onLine || !configured() || !session) return toast('Entri ini sudah terkirim. Menghapusnya butuh koneksi internet.', true);
     try {
-      const j = await callGas({ action: 'gudangDel', id: g.id, petugas: session.nama, kodeCabang: session.cabang, ticket: session.ticket });
+      const j = await callGas({ action: 'gudangDel', id: g.id, petugas: session.nama, kodeCabang: session.cabang || ROOM, ticket: session.ticket });
       if (!j.ok) throw new Error(j.error || 'ditolak server');
     } catch (err) { return toast('Gagal menghapus di server: ' + err.message, true); }
     gudangServer = gudangServer.filter(x => x.id !== g.id);
@@ -2359,66 +2429,19 @@ $('exportHasil').addEventListener('click', async () => {
   finally { b.disabled = false; }
 });
 
-/* ---------- Room ---------- */
-const roomOkList = () => { try { return JSON.parse(localStorage.getItem('so_rooms_ok') || '{}'); } catch (_) { return {}; } };
-function roomMsg(t) { const el = $('roomMsg'); el.hidden = !t; el.textContent = t || ''; }
-function masukRoom(code, nama) {
-  try {
-    localStorage.setItem('so_room', code);
-    localStorage.setItem('so_room_last', code);
-    localStorage.setItem('so_room_name', nama || '');
-    sessionStorage.removeItem('so_session');
-  } catch (_) {}
-  location.reload(); // mulai bersih: database, master, dan sesi milik room yang dipilih
-}
-$('roomForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const code = normRoom($('roomCode').value);
-  if (code.length < 3) return roomMsg('Kode room minimal 3 karakter (huruf, angka, tanda - atau _).');
-  const btn = $('roomOk');
-  btn.disabled = true;
-  roomMsg('');
-  try {
-    if (!configured()) return masukRoom(code, ''); // mode lokal tanpa server
-    const known = roomOkList();
-    if (navigator.onLine) {
-      try {
-        const j = await (await fetch(`${GAS_URL}?action=room&code=${encodeURIComponent(code)}`)).json();
-        if (!j.ok) return roomMsg(j.error || 'Room tidak ditemukan.');
-        known[code] = j.nama || '';
-        try { localStorage.setItem('so_rooms_ok', JSON.stringify(known)); } catch (_) {}
-        return masukRoom(code, j.nama || '');
-      } catch (_) { /* jaringan gagal: pakai daftar room yang pernah diverifikasi */ }
-    }
-    if (code in known) return masukRoom(code, known[code]);
-    roomMsg('Room ini belum pernah diverifikasi di perangkat ini. Sambungkan internet untuk pertama kali.');
-  } finally {
-    btn.disabled = false;
-  }
-});
-$('roomGanti').addEventListener('click', () => {
-  try {
-    localStorage.removeItem('so_room');
-    localStorage.removeItem('so_room_name');
-    sessionStorage.removeItem('so_session');
-  } catch (_) {}
-  location.reload();
-});
-
 /* ---------- Mulai ---------- */
 (async function init() {
   $('cfgWarn').hidden = configured();
   try {
     const u = JSON.parse(localStorage.getItem('so_user') || 'null');
-    if (u) { $('petugas').value = u.p || ''; $('cabang').value = u.c || ''; }
+    if (u) $('petugas').value = u.p || '';
   } catch (_) {}
   try {
     const s = JSON.parse(sessionStorage.getItem('so_session') || 'null');
-    if (s && s.nama && s.cabang && s.room === ROOM) session = s;
+    if (s && s.nama) session = s;
   } catch (_) {}
   showSesi();
-  if (!ROOM) { // belum memilih room: database belum dibuka
-    try { $('roomCode').value = localStorage.getItem('so_room_last') || ''; } catch (_) {}
+  if (!session || !ROOM) { // belum login atau belum memilih room: database room belum dibuka
     updateNet();
     return;
   }
