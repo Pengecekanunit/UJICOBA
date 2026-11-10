@@ -599,9 +599,11 @@ function run(store, mode, fn) {
     t.onerror = t.onabort = () => reject(t.error);
   });
 }
-const putRec = r => run(STORE, 'readwrite', s => s.put(r));
-const delRec = id => run(STORE, 'readwrite', s => s.delete(id));
-const allRecs = () => run(STORE, 'readonly', s => s.getAll());
+// Daftar data lokal disimpan di memori dan dibuang setiap ada perubahan, jadi tidak dibaca ulang berkali-kali
+let _recs = null;
+const putRec = r => { _recs = null; return run(STORE, 'readwrite', s => s.put(r)).finally(() => { _recs = null; }); };
+const delRec = id => { _recs = null; return run(STORE, 'readwrite', s => s.delete(id)).finally(() => { _recs = null; }); };
+const allRecs = async () => _recs || (_recs = await run(STORE, 'readonly', s => s.getAll()));
 const getMaster = () => run(META, 'readonly', s => s.get('master'));
 const putMaster = m => run(META, 'readwrite', s => s.put(m));
 const delMaster = () => run(META, 'readwrite', s => s.delete('master'));
@@ -675,7 +677,7 @@ function getGeo() {
     navigator.geolocation.getCurrentPosition(
       p => res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
       () => res(null),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
   });
 }
@@ -687,7 +689,7 @@ function updateNet() {
   $('net').classList.toggle('off', !on);
   refreshSyncBtn();
 }
-window.addEventListener('online', () => { updateNet(); toast('Kembali online. Data tertunda bisa disinkronkan.'); syncMaster(); syncWh(); syncDone(); });
+window.addEventListener('online', () => { updateNet(); toast('Kembali online. Data tertunda bisa disinkronkan.'); syncSemua(); });
 window.addEventListener('offline', () => { updateNet(); toast('Anda offline. Data disimpan di perangkat.'); });
 
 /* ---------- Data master (Excel / CSV) ---------- */
@@ -731,7 +733,7 @@ function setMaster(m) {
     : 'Belum ada file master. Validasi tidak aktif.';
   $('masterBtn').textContent = m ? 'Ganti master' : 'Unggah master Excel / CSV';
   $('masterDel').hidden = !m;
-  refreshProgress();
+  scheduleProgress();
 }
 
 $('masterBtn').addEventListener('click', () => $('masterFile').click());
@@ -789,6 +791,12 @@ async function uploadMasterToServer(m) {
   }
 }
 
+// Master, warehouse pendukung, lalu daftar unit sudah diopname: berurutan agar tidak membanjiri koneksi HP
+async function syncSemua() {
+  await syncMaster();
+  await syncWh();
+  await syncDone();
+}
 async function syncMaster(force) {
   if (!navigator.onLine || !configured()) {
     if (force) toast('Perlu online dan GAS_URL terisi.', true);
@@ -972,13 +980,46 @@ async function kirim(rec) {
     ticket: rec.ticket || (session && session.ticket) || '',
     room: ROOM
   };
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari preflight CORS
-    body: JSON.stringify(payload)
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 25000); // jangan menggantung selamanya
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari preflight CORS
+      body: JSON.stringify(payload),
+      signal: ctl.signal
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Server menolak data');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Pengiriman satu per satu di latar belakang: petugas bisa langsung lanjut ke unit berikutnya tanpa menunggu server
+let sendChain = Promise.resolve(), lastFailToast = 0, renderTimer = 0, listLimit = 30, recKeys = new Set();
+function antrianKirim(rec) {
+  sendChain = sendChain.then(async () => {
+    try {
+      await kirim(rec);
+      await run(STORE, 'readwrite', s => { // tandai terkirim hanya jika datanya belum dihapus
+        const q = s.get(rec.id);
+        q.onsuccess = () => { if (q.result) { q.result.status = 'synced'; s.put(q.result); } };
+        return q;
+      });
+      _recs = null;
+    } catch (_) {
+      if (Date.now() - lastFailToast > 30000) {
+        lastFailToast = Date.now();
+        toast('Sebagian data belum terkirim. Data aman di perangkat, tekan Sinkronkan Data nanti.', true);
+      }
+    }
+    renderSoon();
   });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'Server menolak data');
+}
+function renderSoon() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 200); }
+function rebuildKeys(recs) {
+  recKeys = new Set();
+  recs.forEach(r => { const e = norm(r.engineNo), c = norm(r.chasisNo); if (e) recKeys.add(e); if (c) recKeys.add(c); });
 }
 
 /* ---------- Simpan ---------- */
@@ -1024,7 +1065,7 @@ $('form').addEventListener('submit', async e => {
   btn.disabled = true;
   try {
     const nE = norm(eNo), nC = norm(cNo);
-    const dup = (await allRecs()).some(r => (nE && norm(r.engineNo) === nE) || (nC && norm(r.chasisNo) === nC));
+    const dup = (nE && recKeys.has(nE)) || (nC && recKeys.has(nC));
     if (dup && !confirm('Unit ini sudah pernah diinput di perangkat ini. Simpan lagi?')) return;
 
     // Lokasi dan waktu foto, dicetak ke foto dan ditulis ke metadata EXIF
@@ -1070,16 +1111,12 @@ $('form').addEventListener('submit', async e => {
     await putRec(rec); // simpan lokal dulu agar tidak hilang
     try { localStorage.setItem('so_user', JSON.stringify({ p: rec.petugas, c: rec.kodeCabang })); } catch (_) {}
 
+    if (nE) recKeys.add(nE);
+    if (nC) recKeys.add(nC);
     let msg = 'Tersimpan di perangkat. Sinkronkan saat online.';
     if (navigator.onLine && configured()) {
-      try {
-        await kirim(rec);
-        rec.status = 'synced';
-        await putRec(rec);
-        msg = 'Tersimpan dan terkirim ke Google Sheets.';
-      } catch (err) {
-        msg = 'Gagal terkirim. Data aman di perangkat, coba sinkronkan lagi.';
-      }
+      antrianKirim(rec); // dikirim di latar belakang
+      msg = 'Tersimpan. Mengirim ke server...';
     }
 
     // Reset form, pertahankan petugas, cabang, dan warehouse manual
@@ -1095,7 +1132,7 @@ $('form').addEventListener('submit', async e => {
     validate();
     suggest('e'); suggest('c');
     toast(msg);
-    await render();
+    renderSoon();
     $('engine').focus();
   } catch (err) {
     toast('Gagal menyimpan: ' + (err && err.message || err), true);
@@ -1167,14 +1204,15 @@ const mkBadge = (text, cls) => { const b = document.createElement('span'); b.cla
 
 async function render() {
   urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
-  const recs = (await allRecs()).sort((a, b) => b.dibuat.localeCompare(a.dibuat));
+  const recs = (await allRecs()).slice().sort((a, b) => b.dibuat.localeCompare(a.dibuat));
+  rebuildKeys(recs);
   const list = $('list');
   list.textContent = '';
   $('empty').hidden = recs.length > 0;
   const pend = recs.filter(r => r.status !== 'synced').length;
   $('count').textContent = recs.length ? `(${pend} tertunda)` : '';
 
-  for (const r of recs) {
+  for (const r of recs.slice(0, listLimit)) {
     const li = document.createElement('li'); li.className = 'item';
     const img = document.createElement('img'); img.alt = 'Foto unit';
     if (r.foto) { const u = URL.createObjectURL(r.foto); urls.push(u); img.src = u; }
@@ -1214,7 +1252,14 @@ async function render() {
     li.append(img, info, acts);
     list.append(li);
   }
-  refreshProgress();
+  if (recs.length > listLimit) {
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button'; b.className = 'ghost'; b.style.width = '100%';
+    b.textContent = `Tampilkan lebih banyak (${recs.length - listLimit} lagi)`;
+    b.onclick = () => { listLimit += 30; render(); };
+    li.append(b); list.append(li);
+  }
+  scheduleProgress();
   refreshSyncBtn(pend);
 }
 async function refreshSyncBtn(pend) {
@@ -1549,17 +1594,23 @@ function switchTab(t) { tab = t; applyTab(); window.scrollTo(0, 0); }
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
 // Daftar unit yang sudah dicek di server (dari semua perangkat), disimpan juga untuk dipakai offline
-async function syncDone() {
+let progTimer = 0;
+function scheduleProgress() { clearTimeout(progTimer); progTimer = setTimeout(() => refreshProgress(), 300); }
+
+let doneVer = '', gudangVer = '';
+async function syncDone(force) {
   if (!navigator.onLine || !configured()) return;
   try {
-    const j = await (await fetch(gasGet('opnamelist'))).json();
-    if (j.ok && Array.isArray(j.rows)) {
+    const since = !force && doneVer ? '&since=' + encodeURIComponent(doneVer) : '';
+    const j = await (await fetch(gasGet('opnamelist') + since)).json();
+    if (j.ok && Array.isArray(j.rows)) {  // j.unchanged: daftar di server belum berubah, pakai yang tersimpan
       doneServer = j.rows;
-      await run(META, 'readwrite', s => s.put({ id: 'done', rows: j.rows, at: new Date().toISOString() }));
+      doneVer = j.version || '';
+      await run(META, 'readwrite', s => s.put({ id: 'done', rows: j.rows, at: new Date().toISOString(), ver: doneVer }));
       refreshProgress();
     }
   } catch (_) {}
-  await syncGudang();
+  await syncGudang(force);
 }
 
 // Unit master dianggap sudah opname jika Engine/Chasis-nya ada di hasil perangkat ini atau di server
@@ -1573,7 +1624,7 @@ async function computeProgress() {
   const belum = [];
   let sudah = 0;
   for (const r of rows) {
-    const ne = norm(r.e), nc = norm(r.c);
+    const ne = r._e, nc = r._c;
     if ((ne && dE.has(ne)) || (nc && dC.has(nc))) sudah++; else belum.push(r);
   }
   return { total: rows.length, sudah, belum, dE, dC, cek: flaggedFrom(recs) };
@@ -1719,7 +1770,7 @@ function periksa(r) {
   switchTab('opname');
   validate();
 }
-$('belumRefresh').addEventListener('click', async () => { await syncDone(); renderBelum(true); });
+$('belumRefresh').addEventListener('click', async () => { await syncDone(true); renderBelum(true); });
 $('belumWh').addEventListener('change', () => renderBelum(false));
 $('belumQ').addEventListener('input', () => renderBelum(false));
 
@@ -2024,7 +2075,9 @@ const SIGNOFF_HTML = `<div class="so-wrap"><p class="so-head">DISEPAKATI,</p><di
 $('signoffAudit').innerHTML = SIGNOFF_HTML;   // markup konstan, tanpa data pengguna
 $('minusSignoff').innerHTML = SIGNOFF_HTML;
 
+let rekapStale = false; // rekap dihitung ulang saat tab audit/minus dibuka setelah ada perubahan fisik gudang
 function showSub(sub) {
+  if (rekapStale && (sub === 'audit' || sub === 'minus')) { rekapStale = false; renderRekap(); }
   $('subAudit').hidden = sub !== 'audit';
   $('subMinus').hidden = sub !== 'minus';
   $('subFisik').hidden = sub !== 'fisik';
@@ -2089,7 +2142,7 @@ $('rekapPdf').addEventListener('click', () => bukaModal('pdf'));
 $('rekapExcel').addEventListener('click', () => bukaModal('excel'));
 $('minusPdf').addEventListener('click', () => bukaModal('minus-pdf'));
 $('minusExcel').addEventListener('click', () => bukaModal('minus-excel'));
-const segarkan = async () => { await syncDone(); renderRekap(); };
+const segarkan = async () => { await syncDone(true); renderRekap(); };
 $('rekapRefresh').addEventListener('click', segarkan);
 $('minusRefresh').addEventListener('click', segarkan);
 
@@ -2113,14 +2166,16 @@ async function pushGudang() {
     } catch (_) {}
   }
 }
-async function syncGudang() {
+async function syncGudang(force) {
   await pushGudang();
   if (!navigator.onLine || !configured()) return;
   try {
-    const j = await (await fetch(gasGet('gudanglist'))).json();
+    const since = !force && gudangVer ? '&since=' + encodeURIComponent(gudangVer) : '';
+    const j = await (await fetch(gasGet('gudanglist') + since)).json();
     if (j.ok && Array.isArray(j.rows)) {
       gudangServer = j.rows;
-      await run(META, 'readwrite', s => s.put({ id: 'gudangServer', rows: j.rows }));
+      gudangVer = j.version || '';
+      await run(META, 'readwrite', s => s.put({ id: 'gudangServer', rows: j.rows, ver: gudangVer }));
     }
   } catch (_) {}
 }
@@ -2133,8 +2188,9 @@ $('gudangForm').addEventListener('submit', async e => {
     catatan: $('gCat').value.trim(), waktu: new Date().toISOString(), synced: false });
   $('gQty').value = 1; $('gCat').value = '';
   toast('Fisik gudang tersimpan.');
-  await pushGudang();
-  renderRekap();
+  rekapStale = true;
+  renderGudangList();
+  pushGudang().then(renderGudangList);
 });
 
 async function renderGudangList() {
@@ -2163,7 +2219,8 @@ async function hapusGudang(g) {
     gudangServer = gudangServer.filter(x => x.id !== g.id);
   }
   await gudangDel(g.id);
-  renderRekap();
+  rekapStale = true;
+  renderGudangList();
 }
 
 
@@ -2266,7 +2323,7 @@ const saveWh = () => run(META, 'readwrite', s => s.put({ id: 'wh', version: wh.v
 function buildUnits() {
   whStats = {};
   if (!master) return [];
-  const pool = master.rows.map(r => ({ ...r, wt: {}, sumber: null, fw: r.w }));
+  const pool = master.rows.map(r => ({ ...r, wt: {}, sumber: null, fw: r.w, _e: norm(r.e), _c: norm(r.c) }));
   const byR = new Map(), byM = new Map();
   const idx = u => { const r = norm(u.c), m = norm(u.e); if (r) byR.set(r, u); if (m) byM.set(m, u); };
   pool.forEach(idx);
@@ -2285,7 +2342,7 @@ function buildUnits() {
       const key = `${r || '-'}|${m || '-'}`;
       if (keys.has(key)) { st.ganda++; continue; }
       keys.add(key);
-      baru.push({ e: row.e, c: row.c, t: row.t || 'Unit Motor', w: WAREHOUSE_TIDAK_TERDATA, wt: { [slot]: row.w }, sumber: Number(slot), fw: row.w });
+      baru.push({ e: row.e, c: row.c, t: row.t || 'Unit Motor', w: WAREHOUSE_TIDAK_TERDATA, wt: { [slot]: row.w }, sumber: Number(slot), fw: row.w, _e: m, _c: r });
       st.baru++;
     }
     baru.forEach(u => { pool.push(u); idx(u); });
@@ -2297,12 +2354,12 @@ function rebuildIndex(refresh = true) {
   unitList = buildUnits();
   byE.clear(); byC.clear(); sugIdx.length = 0;
   for (const r of unitList) {
-    const e = norm(r.e), c = norm(r.c);
+    const e = r._e, c = r._c; // sudah dinormalkan saat unit dibangun
     if (e) byE.set(e, r);
     if (c) byC.set(c, r);
     sugIdx.push({ r, e, c });
   }
-  if (refresh) { refreshProgress(); validate(); }
+  if (refresh) { scheduleProgress(); validate(); }
 }
 
 function parseWh(buf) {
@@ -2481,18 +2538,17 @@ $('exportHasil').addEventListener('click', async () => {
     return;
   }
   loadLibs();
+  getGeo(); // minta izin dan siapkan lokasi sejak awal, supaya foto pertama tidak menunggu GPS
   try {
     db = await openDB();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-    try { const dn = await run(META, 'readonly', s => s.get('done')); if (dn) doneServer = dn.rows || []; } catch (_) {}
-    try { const gs = await run(META, 'readonly', s => s.get('gudangServer')); if (gs) gudangServer = gs.rows || []; } catch (_) {}
+    try { const dn = await run(META, 'readonly', s => s.get('done')); if (dn) { doneServer = dn.rows || []; doneVer = dn.ver || ''; } } catch (_) {}
+    try { const gs = await run(META, 'readonly', s => s.get('gudangServer')); if (gs) { gudangServer = gs.rows || []; gudangVer = gs.ver || ''; } } catch (_) {}
     try { const w = await run(META, 'readonly', s => s.get('wh')); if (w) wh = { version: w.version || null, slots: w.slots || {} }; } catch (_) {}
     setMaster(await getMaster() || null);
     renderWhList();
     await render();
-    syncMaster(); // ambil master terbaru dari server bila online
-    syncWh();     // ambil warehouse pendukung
-    syncDone();   // ambil daftar unit yang sudah diopname semua perangkat
+    setTimeout(syncSemua, 800); // beri ruang aplikasi tampil dulu, lalu ambil data server satu per satu
   } catch (e) {
     toast('IndexedDB tidak tersedia di browser ini.', true);
   }
