@@ -287,21 +287,25 @@
     <h2>Input stok</h2>
     <p id="progres" class="hint" style="margin:-6px 0 12px"></p>
     <form id="form" autocomplete="off">
-      <label for="engine">Engine No</label>
+      <label for="cari">Cari unit (No. Mesin atau No. Rangka)</label>
       <div class="scan">
-        <input id="engine" class="mono" type="text" autocapitalize="characters" spellcheck="false" placeholder="Ketik sebagian nomor">
-        <button class="ghost scanbtn" type="button" data-target="engine" hidden>Pindai</button>
+        <input id="cari" class="mono" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Ketik sebagian No. Mesin atau No. Rangka">
+        <button class="ghost scanbtn" type="button" data-target="cari" hidden>Pindai</button>
       </div>
       <ul id="sugE" class="sug" hidden></ul>
+      <input id="engine" type="hidden">
+      <input id="chasis" type="hidden">
 
-      <label for="chasis">Chasis No</label>
-      <div class="scan">
-        <input id="chasis" class="mono" type="text" autocapitalize="characters" spellcheck="false" placeholder="Ketik sebagian nomor">
-        <button class="ghost scanbtn" type="button" data-target="chasis" hidden>Pindai</button>
+      <div id="jenisBox" class="ui-box" style="margin-top:10px" hidden>
+        <div class="m" style="margin-bottom:6px">Nomor ini tidak ada di data. Nomor yang Anda ketik adalah:</div>
+        <div class="seg">
+          <label><input type="radio" name="jnomor" value="mesin" checked><span>No. Mesin</span></label>
+          <label><input type="radio" name="jnomor" value="rangka"><span>No. Rangka</span></label>
+        </div>
       </div>
-      <ul id="sugC" class="sug" hidden></ul>
 
-      <div id="val" class="val" role="status" aria-live="polite">Isi Engine No atau Chasis No untuk validasi.</div>
+      <div id="val" class="val" role="status" aria-live="polite">Ketik No. Mesin atau No. Rangka untuk mencari unit.</div>
+      <div id="unitSel" class="ui-box" style="margin-top:8px" hidden></div>
       <div id="unitInfo" class="unit-info" hidden></div>
       <div id="luarBox" class="luar-box" hidden>
         <label class="luar-chk"><input id="luarChk" type="checkbox"><span>Tidak ada di data, perlu dicek ulang</span></label>
@@ -828,7 +832,7 @@ $('masterDel').addEventListener('click', async () => {
 /* ---------- Validasi Engine No / Chasis No ---------- */
 function lookup(eRaw, cRaw) {
   const e = norm(eRaw), c = norm(cRaw);
-  if (!e && !c) return { s: 'Belum Divalidasi', cls: '', msg: 'Isi Engine No atau Chasis No untuk validasi.' };
+  if (!e && !c) return { s: 'Belum Divalidasi', cls: '', msg: 'Ketik No. Mesin atau No. Rangka untuk mencari unit.' };
   if (!master) return { s: 'Belum Divalidasi', cls: 'warn', msg: 'Master belum diunggah. Data disimpan tanpa validasi.' };
   const mE = e ? byE.get(e) : null, mC = c ? byC.get(c) : null;
 
@@ -858,24 +862,26 @@ function validate() {
   ksuHint(r);
   renderUnitInfo(r.row);
   luarBoxUpdate(r);
+  const us = $('unitSel');
+  us.textContent = '';
+  if (r.row) {
+    us.append(mk('div', 'mono', `Mesin: ${r.row.e || '-'}`), mk('div', 'mono', `Rangka: ${r.row.c || '-'}`));
+    us.hidden = false;
+  } else us.hidden = true;
   return r;
 }
-/* Saran otomatis: ketik minimal 3 karakter (mis. 4 angka terakhir), pilih dari daftar */
-function suggest(field) {
-  const input = $(field === 'e' ? 'engine' : 'chasis');
-  const list = $(field === 'e' ? 'sugE' : 'sugC');
-  const q = norm(input.value);
+/* Satu kolom pencarian: ketik minimal 3 karakter dari No. Mesin ATAU No. Rangka (mis. 4 angka terakhir), pilih dari daftar */
+function suggest() {
+  const list = $('sugE'), q = norm($('cari').value);
   list.textContent = '';
   list.hidden = true;
-  if (!master || q.length < 3) return false;
-
+  if (!master || q.length < 3) return 0;
+  // nilai kecil = lebih cocok: sama persis, lalu akhiran, awalan, lalu sebagian
+  const sc = v => !v ? 9 : v === q ? 0 : v.endsWith(q) ? 1 : v.startsWith(q) ? 2 : v.includes(q) ? 3 : 9;
   const hits = [];
-  for (const x of sugIdx) {
-    const v = x[field], p = v.indexOf(q);
-    if (p < 0) continue;
-    hits.push({ x, s: v.endsWith(q) ? 0 : p === 0 ? 1 : 2 }); // akhiran dulu, lalu awalan, lalu sisanya
-  }
-  if (!hits.length || (hits.length === 1 && hits[0].x[field] === q)) return false;
+  for (const x of sugIdx) { const s = Math.min(sc(x.e), sc(x.c)); if (s < 9) hits.push({ x, s }); }
+  if (!hits.length) return 0;
+  if (hits.length === 1 && hits[0].s === 0) return 1; // nomor lengkap dan unik: langsung cocok, tanpa daftar
   hits.sort((a, b) => a.s - b.s);
 
   for (const h of hits.slice(0, 8)) {
@@ -902,27 +908,44 @@ function suggest(field) {
     list.append(li);
   }
   list.hidden = false;
-  return true;
+  return hits.length;
+}
+
+// Mengisi kolom tersembunyi (No. Mesin dan No. Rangka) dari apa yang diketik di kolom pencarian
+function syncCari(tebakJenis) {
+  const raw = $('cari').value.trim().toUpperCase(), q = norm(raw);
+  const row = q.length >= 3 ? (byE.get(q) || byC.get(q) || null) : null;
+  const jumlah = suggest();
+  const tidakAda = q.length >= 3 && !row && jumlah === 0;
+  $('jenisBox').hidden = !tidakAda;
+  if (tidakAda && tebakJenis) { // nomor rangka umumnya jauh lebih panjang dari nomor mesin
+    document.querySelector(`input[name=jnomor][value=${q.length >= 15 ? 'rangka' : 'mesin'}]`).checked = true;
+  }
+  let e = '', c = '';
+  if (row) { e = (row.e || '').toUpperCase(); c = (row.c || '').toUpperCase(); }
+  else if (tidakAda) { if (document.querySelector('input[name=jnomor]:checked').value === 'rangka') c = raw; else e = raw; }
+  $('engine').value = e;
+  $('chasis').value = c;
+  validate();
+  if (jumlah && !row) {
+    $('val').className = 'val';
+    $('val').textContent = 'Pilih unit dari daftar di bawah, atau ketik nomor lengkap.';
+  }
 }
 function pick(r) {
+  $('cari').value = (r.e || r.c || '').toUpperCase();
   $('engine').value = (r.e || '').toUpperCase();
   $('chasis').value = (r.c || '').toUpperCase();
-  suggest('e'); suggest('c');
+  $('jenisBox').hidden = true;
+  suggest();
+  $('sugE').hidden = true;
   validate();
 }
-for (const [id, f, sid] of [['engine', 'e', 'sugE'], ['chasis', 'c', 'sugC']]) {
-  const el = $(id);
-  el.addEventListener('input', () => {
-    validate();
-    if (suggest(f) && cur.s !== 'Cocok') {
-      $('val').className = 'val';
-      $('val').textContent = 'Pilih unit dari daftar di bawah, atau ketik nomor lengkap.';
-    }
-  });
-  el.addEventListener('focus', () => suggest(f));
-  el.addEventListener('blur', () => { $(sid).hidden = true; });
-  $(sid).addEventListener('pointerdown', e => e.preventDefault()); // cegah input kehilangan fokus sebelum item terpilih
-}
+$('cari').addEventListener('input', () => syncCari(true));
+$('cari').addEventListener('focus', () => suggest());
+$('cari').addEventListener('blur', () => { $('sugE').hidden = true; });
+$('sugE').addEventListener('pointerdown', e => e.preventDefault()); // cegah input kehilangan fokus sebelum item terpilih
+document.querySelectorAll('input[name=jnomor]').forEach(r => r.addEventListener('change', () => syncCari(false)));
 ['typeUnit', 'warehouse'].forEach(id => $(id).addEventListener('input', e => delete e.target.dataset.auto));
 
 /* ---------- Pindai barcode (jika browser mendukung) ---------- */
@@ -1050,7 +1073,7 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const eNo = $('engine').value.trim().toUpperCase(), cNo = $('chasis').value.trim().toUpperCase();
   const file = $('foto').files[0];
-  if (!eNo && !cNo) return toast('Isi Engine No atau Chasis No.', true);
+  if (!eNo && !cNo) return toast('Isi No. Mesin atau No. Rangka.', true);
   const statusOp = document.querySelector('input[name=statusOp]:checked').value;
   if (!file && statusOp !== 'TIDAK ADA') return toast('Foto unit wajib diisi.', true);
 
@@ -1120,7 +1143,8 @@ $('form').addEventListener('submit', async e => {
     }
 
     // Reset form, pertahankan petugas, cabang, dan warehouse manual
-    ['engine', 'chasis'].forEach(id => $(id).value = '');
+    ['cari', 'engine', 'chasis'].forEach(id => $(id).value = '');
+    $('jenisBox').hidden = true;
     $('typeUnit').value = ''; delete $('typeUnit').dataset.auto;
     if ($('warehouse').dataset.auto) { $('warehouse').value = ''; delete $('warehouse').dataset.auto; }
     $('foto').value = ''; $('foto').dispatchEvent(new Event('change'));
@@ -1130,10 +1154,10 @@ $('form').addEventListener('submit', async e => {
     $('luarChk').checked = false; $('luarNote').value = '';
     applyStatus();
     validate();
-    suggest('e'); suggest('c');
+    suggest();
     toast(msg);
     renderSoon();
-    $('engine').focus();
+    $('cari').focus();
   } catch (err) {
     toast('Gagal menyimpan: ' + (err && err.message || err), true);
   } finally {
@@ -1557,7 +1581,7 @@ function specKSU(noMesin) {
 function ksuHint(r) {
   const e = (r && r.row && r.row.e) || $('engine').value;
   const s = specKSU(e), box = $('ksuSpec');
-  if (!norm(e)) box.textContent = 'Isi Engine No untuk melihat spesifikasi KSU standar unit ini.';
+  if (!norm(e)) box.textContent = 'Cari unit lebih dulu untuk melihat spesifikasi KSU standar unit ini.';
   else if (s) box.textContent = `Standar ${s.prefix}: Aki ${s.aki}, Helm ${s.helm}, Spion ${s.spion}`;
   else box.textContent = `Awalan mesin ${norm(e).substring(0, 3)} belum ada di tabel spesifikasi KSU.`;
 }
@@ -1764,11 +1788,8 @@ document.querySelectorAll('#belumMode button').forEach(bt => bt.addEventListener
   renderBelum(false);
 }));
 function periksa(r) {
-  $('engine').value = (r.e || '').toUpperCase();
-  $('chasis').value = (r.c || '').toUpperCase();
-  suggest('e'); suggest('c');
   switchTab('opname');
-  validate();
+  pick(r);
 }
 $('belumRefresh').addEventListener('click', async () => { await syncDone(true); renderBelum(true); });
 $('belumWh').addEventListener('change', () => renderBelum(false));
